@@ -24,7 +24,11 @@ class _FeedSectionState extends State<FeedSection> {
         ).where((i) => i != _pinnedFeedIndex).toList();
 
     return Padding(
-      padding: EdgeInsets.all(widget.pagePadding),
+      padding: EdgeInsets.only(
+        right: widget.pagePadding,
+        top: widget.pagePadding,
+        bottom: widget.pagePadding,
+      ),
       child: Column(
         children: [
           // Pinned feed at the top
@@ -34,7 +38,11 @@ class _FeedSectionState extends State<FeedSection> {
               duration: const Duration(milliseconds: 250),
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
-              child: SizedBox(
+              child: Container(
+                clipBehavior: Clip.hardEdge,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 key: ValueKey(_pinnedFeedIndex),
                 width: double.infinity,
                 child: widget.feeds[_pinnedFeedIndex],
@@ -71,9 +79,13 @@ class _FeedSectionState extends State<FeedSection> {
                           _pinnedFeedIndex = actualIndex;
                         });
                       },
-                      child: SizedBox(
+                      child: Container(
                         width: itemWidth,
+                        clipBehavior: Clip.hardEdge,
                         height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         child: IgnorePointer(
                           // Ignore interactions on small feeds
                           child: widget.feeds[actualIndex],

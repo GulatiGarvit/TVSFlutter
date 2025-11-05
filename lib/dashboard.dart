@@ -43,12 +43,38 @@ class _DashboardPageState extends State<DashboardPage> {
     _maxNavWidth = screenWidth * 0.35;
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade900,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(40),
+        child: AppBar(
+          title: const Text(
+            'TVS Dashboard',
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: [
+            IconButton(
+              onPressed: () {},
+              icon: Icon(Icons.info_outline, color: Colors.white),
+            ),
+          ],
+          backgroundColor: Colors.blueGrey,
+          centerTitle: true,
+          toolbarHeight: 40,
+          automaticallyImplyLeading: false,
+          elevation: 8,
+          shadowColor: Colors.black,
+          flexibleSpace: Container(),
+        ),
+      ),
       body: Row(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: _navWidth,
-            child: const NavigationSection(),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 8.0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: _navWidth,
+              child: NavigationSection(dataService: dataService),
+            ),
           ),
           GestureDetector(
             behavior: HitTestBehavior.translucent,
@@ -63,12 +89,11 @@ class _DashboardPageState extends State<DashboardPage> {
             onTap: () => setState(() => _navWidth = _defaultNavWidth),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeftRight,
-              child: Container(
+              child: SizedBox(
                 width: 8,
-                color: Colors.grey.shade300,
                 child: Center(
                   child: Container(
-                    width: 2,
+                    width: 4,
                     height: 40,
                     color: Colors.grey.shade500,
                   ),
