@@ -30,12 +30,20 @@ class _FeedSectionState extends State<FeedSection> {
           // Pinned feed at the top
           Flexible(
             flex: 2,
-            child: SizedBox(
-              width: double.infinity,
-              child: widget.feeds[_pinnedFeedIndex],
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: SizedBox(
+                key: ValueKey(_pinnedFeedIndex),
+                width: double.infinity,
+                child: widget.feeds[_pinnedFeedIndex],
+              ),
             ),
           ),
+
           SizedBox(height: widget.pagePadding),
+
           // Non-pinned feeds below
           Flexible(
             flex: 1,
@@ -55,7 +63,9 @@ class _FeedSectionState extends State<FeedSection> {
                       (context, index) => SizedBox(width: widget.pagePadding),
                   itemBuilder: (context, index) {
                     final actualIndex = otherFeedIndices[index];
+
                     return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () {
                         setState(() {
                           _pinnedFeedIndex = actualIndex;
@@ -64,7 +74,10 @@ class _FeedSectionState extends State<FeedSection> {
                       child: SizedBox(
                         width: itemWidth,
                         height: 80,
-                        child: widget.feeds[actualIndex],
+                        child: IgnorePointer(
+                          // Ignore interactions on small feeds
+                          child: widget.feeds[actualIndex],
+                        ),
                       ),
                     );
                   },

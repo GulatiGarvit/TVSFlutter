@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tvs/direct_camera_feed.dart';
 import 'data_service.dart';
 import 'video_feed.dart';
 import 'feed.dart';
@@ -78,8 +79,8 @@ class _DashboardPageState extends State<DashboardPage> {
           Expanded(
             child: FeedSection(
               feeds: [
-                VideoFeed(title: 'Camera Feed', dataService: dataService),
-                const Feed(title: 'Feed 2'),
+                VideoFeed(title: 'Dehazed Feed', dataService: dataService),
+                const DirectCameraFeed(),
                 const Feed(title: 'Feed 3'),
               ],
             ),
