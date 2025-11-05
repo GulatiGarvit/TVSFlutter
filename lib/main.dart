@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tvs/dashboard.dart';
-import 'package:tvs/feed.dart';
+import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
 import 'package:tvs/navigation_section.dart';
 

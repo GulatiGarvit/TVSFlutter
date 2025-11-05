@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tvs/feed.dart';
-import 'package:tvs/feed_section.dart';
-import 'package:tvs/navigation_section.dart';
+import 'data_service.dart';
+import 'video_feed.dart';
+import 'feed.dart';
+import 'feed_section.dart';
+import 'navigation_section.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -11,50 +13,53 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  late final DataService dataService;
   late double _defaultNavWidth;
   double? _navWidth;
-
-  // Boundaries
   late double _minNavWidth;
   late double _maxNavWidth;
+
+  @override
+  void initState() {
+    super.initState();
+    // Connect once on startup
+    dataService = DataService("ws://127.0.0.1:8765");
+    dataService.connect();
+  }
+
+  @override
+  void dispose() {
+    dataService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     _defaultNavWidth = screenWidth * 0.25;
     _navWidth ??= _defaultNavWidth;
-    _minNavWidth = screenWidth * 0;
+    _minNavWidth = screenWidth * 0.0;
     _maxNavWidth = screenWidth * 0.35;
 
     return Scaffold(
       body: Row(
         children: [
-          // Navigation Section
           AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             width: _navWidth,
             child: const NavigationSection(),
           ),
-
-          // Drag / Tap Handle
           GestureDetector(
             behavior: HitTestBehavior.translucent,
-
-            // Handle dragging
             onHorizontalDragUpdate: (details) {
               setState(() {
-                _navWidth = _navWidth! + details.delta.dx;
-                _navWidth = _navWidth!.clamp(_minNavWidth, _maxNavWidth);
+                _navWidth = (_navWidth! + details.delta.dx).clamp(
+                  _minNavWidth,
+                  _maxNavWidth,
+                );
               });
             },
-
-            // Handle tapping → reset to default
-            onTap: () {
-              setState(() {
-                _navWidth = _defaultNavWidth;
-              });
-            },
-
+            onTap: () => setState(() => _navWidth = _defaultNavWidth),
             child: MouseRegion(
               cursor: SystemMouseCursors.resizeLeftRight,
               child: Container(
@@ -70,14 +75,12 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
           ),
-
-          // Feed Section
           Expanded(
             child: FeedSection(
-              feeds: const [
-                Feed(title: 'Feed 1'),
-                Feed(title: 'Feed 2'),
-                Feed(title: 'Feed 3'),
+              feeds: [
+                VideoFeed(title: 'Camera Feed', dataService: dataService),
+                const Feed(title: 'Feed 2'),
+                const Feed(title: 'Feed 3'),
               ],
             ),
           ),

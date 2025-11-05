@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:tvs/feed.dart';
+import 'package:tvs/video_feed.dart';
 
 class FeedSection extends StatefulWidget {
-  final List<Feed> feeds;
+  final List<Widget> feeds;
   final double pagePadding = 8;
 
   const FeedSection({super.key, required this.feeds});
