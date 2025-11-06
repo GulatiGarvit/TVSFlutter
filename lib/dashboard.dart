@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tvs/direct_camera_feed.dart';
+import 'package:tvs/settings_dialog.dart';
+import 'package:tvs/widgets/clock.dart';
 import 'data_service.dart';
 import 'video_feed.dart';
 import 'feed.dart';
@@ -51,10 +53,22 @@ class _DashboardPageState extends State<DashboardPage> {
             'TVS Dashboard',
             style: TextStyle(color: Colors.white),
           ),
+          leading: const Padding(
+            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 8.0),
+            child: ClockWidget(textStyle: TextStyle(color: Colors.white)),
+          ),
+          leadingWidth: 200,
           actions: [
             IconButton(
-              onPressed: () {},
-              icon: Icon(Icons.info_outline, color: Colors.white),
+              onPressed: () {
+                // Show settings dialog
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const SettingsDialog(),
+                );
+              },
+              icon: Icon(Icons.settings_outlined, color: Colors.white),
             ),
           ],
           backgroundColor: Colors.blueGrey,
