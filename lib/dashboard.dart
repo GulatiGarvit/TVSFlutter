@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tvs/direct_camera_feed.dart';
+import 'package:tvs/providers/navigation.dart';
 import 'package:tvs/settings_dialog.dart';
 import 'package:tvs/widgets/clock.dart';
 import 'data_service.dart';
@@ -87,7 +89,10 @@ class _DashboardPageState extends State<DashboardPage> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: _navWidth,
-              child: NavigationSection(dataService: dataService),
+              child: ChangeNotifierProvider(
+                create: (_) => NavigationProvider(),
+                child: NavigationSection(),
+              ),
             ),
           ),
           GestureDetector(
