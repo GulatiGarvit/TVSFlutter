@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tvs/dashboard.dart';
+import 'package:tvs/providers/navigation.dart';
+import 'package:tvs/providers/settings.dart';
 import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
 import 'package:tvs/navigation_section.dart';
@@ -26,6 +29,12 @@ class MyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DashboardPage();
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+      ],
+      child: const DashboardPage(),
+    );
   }
 }

@@ -1,6 +1,9 @@
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:tvs/data.dart';
+import 'package:tvs/providers/navigation.dart';
+import 'package:tvs/providers/settings.dart';
 import 'package:tvs/widgets/box_radio_group.dart';
 
 class SettingsDialog extends StatefulWidget {
@@ -13,10 +16,15 @@ class SettingsDialog extends StatefulWidget {
 class _SettingsDialogState extends State<SettingsDialog> {
   String? _selectedAirport;
 
-  String _selectedUnit = "Metric";
+  late String _selectedUnit;
 
   @override
   Widget build(BuildContext context) {
+    _selectedAirport =
+        context.watch<SettingsProvider>().airportCode != null
+            ? "${context.watch<SettingsProvider>().airportCode} - ${airportData[context.watch<SettingsProvider>().airportCode]!['name']}"
+            : null;
+    _selectedUnit = context.watch<SettingsProvider>().unitSystem;
     return AlertDialog(
       title: const Text('Settings'),
       content: Container(
@@ -54,6 +62,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     onChanged: (value) {
                       setState(() {
                         _selectedAirport = value;
+                        if (_selectedAirport == null) return;
+
+                        // Update in provider
+                        context.read<SettingsProvider>().setAirportCode(
+                          _selectedAirport!.split(" - ")[0],
+                        );
                       });
                     },
                   ),
@@ -70,11 +84,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: BoxRadioGroup(
-                    options: ["Metric", "Imperial"],
+                    options: ["Nautical", "Metric", "Imperial"],
                     selected: _selectedUnit,
                     onChanged: (value) {
                       setState(() {
                         _selectedUnit = value;
+                        context.read<SettingsProvider>().setUnitSystem(value);
                       });
                     },
                   ),

@@ -1,16 +1,26 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:tvs/dialogs/taxi_path_selection_dialog.dart';
 import 'package:tvs/navigation_step.dart';
+import 'package:tvs/utils/navigation_utils.dart';
 
 class NavigationProvider extends ChangeNotifier {
   List<NavigationStep> _steps = [];
+  List<RawPathSegment> _rawPath = [];
   int _currentStepIndex = 0;
   bool _isNavigating = false;
+  String _unitSystem = 'Metric';
+  Map<String, dynamic>? _airportData;
 
   // GPS and Gyro data
   double _currentLatitude = 0.0;
   double _currentLongitude = 0.0;
   double _currentHeading = 0.0;
   int _distanceToNextStep = 0;
+
+  double get currentLatitude => _currentLatitude;
+  double get heading => _currentHeading;
+  double get currentLongitude => _currentLongitude;
+  List<RawPathSegment> get rawPath => _rawPath;
 
   List<NavigationStep> get steps => _steps;
   int get currentStepIndex => _currentStepIndex;
@@ -38,16 +48,33 @@ class NavigationProvider extends ChangeNotifier {
 
   int get distanceToNextStep => _distanceToNextStep;
 
-  void startNavigation(List<NavigationStep> steps) {
-    _steps = steps;
+  void setUnitSystem(String unitSystem) {
+    if (_unitSystem != unitSystem) {
+      _unitSystem = unitSystem;
+      // Recalculate all steps with new unit system
+      if (_isNavigating && _rawPath.isNotEmpty) {
+        _steps = _calculateNavigationSteps(_rawPath);
+        notifyListeners();
+      }
+    }
+  }
+
+  void setAirportData(Map<String, dynamic> airportData) {
+    _airportData = airportData;
+  }
+
+  void startNavigation(List<RawPathSegment> rawPath) {
+    _rawPath = rawPath;
+    _steps = _calculateNavigationSteps(rawPath);
     _currentStepIndex = 0;
     _isNavigating = true;
-    _distanceToNextStep = steps.isNotEmpty ? steps[0].distance : 0;
+    _distanceToNextStep = _steps.isNotEmpty ? _steps[0].distance : 0;
     notifyListeners();
   }
 
   void stopNavigation() {
     _steps = [];
+    _rawPath = [];
     _currentStepIndex = 0;
     _isNavigating = false;
     _distanceToNextStep = 0;
@@ -65,23 +92,206 @@ class NavigationProvider extends ChangeNotifier {
   }
 
   void _recalculateNavigation() {
-    // TODO: Implement actual distance calculation based on GPS position
-    // For now, this is a placeholder that simulates progress
+    // Get current step's target coordinates
+    if (_currentStepIndex >= _rawPath.length) return;
 
-    // Calculate distance to next waypoint
-    // If distance is less than threshold, advance to next step
-    // Update _distanceToNextStep and _currentStepIndex accordingly
+    final currentSegment = _rawPath[_currentStepIndex];
+    final targetLat = currentSegment.coordinates[1][0];
+    final targetLng = currentSegment.coordinates[1][1];
 
-    // This method will be called frequently, so we only update the current step's
-    // distance and direction without recreating the entire step list
+    // Calculate distance to target waypoint
+    final distanceMeters = NavigationUtils.calculateDistance(
+      _currentLatitude,
+      _currentLongitude,
+      targetLat,
+      targetLng,
+    );
 
-    // Example logic (replace with actual implementation):
-    // _distanceToNextStep = calculateDistanceToNextWaypoint(_currentLatitude, _currentLongitude);
-    // if (_distanceToNextStep < 10 && _currentStepIndex < _steps.length - 1) {
-    //   _currentStepIndex++;
-    //   _distanceToNextStep = _steps[_currentStepIndex].distance;
-    //   notifyListeners();
-    // }
+    // Convert to current unit system
+    final distance =
+        NavigationUtils.convertFromMeters(distanceMeters, _unitSystem).round();
+
+    // Update distance to next step
+    _distanceToNextStep = distance;
+
+    // Check if we should advance to next step (within 10 meters/units threshold)
+    final thresholdMeters = NavigationUtils.convertToMeters(10, _unitSystem);
+    if (distanceMeters < thresholdMeters &&
+        _currentStepIndex < _steps.length - 1) {
+      _currentStepIndex++;
+      if (_currentStepIndex < _rawPath.length) {
+        _distanceToNextStep = _steps[_currentStepIndex].distance;
+      }
+      notifyListeners();
+    } else if (_currentStepIndex == _steps.length - 1 &&
+        distanceMeters < thresholdMeters) {
+      // Reached final destination
+      stopNavigation();
+    }
+  }
+
+  List<NavigationStep> _calculateNavigationSteps(List<RawPathSegment> rawPath) {
+    List<NavigationStep> steps = [];
+
+    for (int i = 0; i < rawPath.length; i++) {
+      final current = rawPath[i];
+      final isLast = i == rawPath.length - 1;
+
+      // Handle hold action
+      if (current.action == NavigationAction.hold) {
+        steps.add(
+          NavigationStep(
+            direction: Direction.straight,
+            action: NavigationAction.hold,
+            pathType: current.type,
+            pathValue: current.name,
+            distance: 0,
+            time: 30, // 30 seconds hold time
+          ),
+        );
+        continue;
+      }
+
+      // Calculate distance for this segment
+      final distanceMeters = NavigationUtils.calculateDistance(
+        current.coordinates[0][0],
+        current.coordinates[0][1],
+        current.coordinates[1][0],
+        current.coordinates[1][1],
+      );
+
+      final distance =
+          NavigationUtils.convertFromMeters(
+            distanceMeters,
+            _unitSystem,
+          ).round();
+
+      // If there's a next path, calculate turn
+      if (!isLast && i + 1 < rawPath.length) {
+        final next = rawPath[i + 1];
+
+        // Skip if next is a hold action
+        if (next.action == NavigationAction.hold) {
+          steps.add(
+            NavigationStep(
+              direction: Direction.straight,
+              action: NavigationAction.continueAlong,
+              pathType: current.type,
+              pathValue: current.name,
+              distance: distance,
+              time: NavigationUtils.calculateTime(distanceMeters),
+            ),
+          );
+          continue;
+        }
+
+        // Calculate turn direction
+        final currentBearing = NavigationUtils.calculateBearing(
+          current.coordinates[0][0],
+          current.coordinates[0][1],
+          current.coordinates[1][0],
+          current.coordinates[1][1],
+        );
+
+        final nextBearing = NavigationUtils.calculateBearing(
+          next.coordinates[0][0],
+          next.coordinates[0][1],
+          next.coordinates[1][0],
+          next.coordinates[1][1],
+        );
+
+        final relativeAngle = NavigationUtils.calculateRelativeAngle(
+          currentBearing,
+          nextBearing,
+        );
+
+        final turnDirection = NavigationUtils.getTurnDirection(relativeAngle);
+
+        // If it's a turn, split into two steps
+        if (turnDirection != TurnDirection.straight) {
+          // Distance before turn (90% of segment, or 50m before, whichever is larger)
+          final turnPrepDistanceMeters = NavigationUtils.convertToMeters(
+            NavigationUtils.turnPreparationDistance,
+            'Metric',
+          );
+
+          final distanceBeforeTurnMeters =
+              distanceMeters > turnPrepDistanceMeters
+                  ? distanceMeters - turnPrepDistanceMeters
+                  : distanceMeters * 0.9;
+
+          final distanceBeforeTurn =
+              NavigationUtils.convertFromMeters(
+                distanceBeforeTurnMeters,
+                _unitSystem,
+              ).round();
+
+          // Add straight segment before turn
+          steps.add(
+            NavigationStep(
+              direction: Direction.straight,
+              action: NavigationAction.continueAlong,
+              pathType: current.type,
+              pathValue: current.name,
+              distance: distanceBeforeTurn,
+              time: NavigationUtils.calculateTime(distanceBeforeTurnMeters),
+            ),
+          );
+
+          // Add turn segment
+          final turnDistanceMeters = distanceMeters - distanceBeforeTurnMeters;
+          final turnDistance =
+              NavigationUtils.convertFromMeters(
+                turnDistanceMeters,
+                _unitSystem,
+              ).round();
+
+          final direction =
+              turnDirection == TurnDirection.left
+                  ? Direction.left
+                  : turnDirection == TurnDirection.right
+                  ? Direction.right
+                  : Direction.straight;
+
+          steps.add(
+            NavigationStep(
+              direction: direction,
+              action: NavigationAction.turn,
+              pathType: next.type,
+              pathValue: next.name,
+              distance: turnDistance,
+              time: NavigationUtils.calculateTime(turnDistanceMeters),
+            ),
+          );
+        } else {
+          // No significant turn, just continue
+          steps.add(
+            NavigationStep(
+              direction: Direction.straight,
+              action: NavigationAction.continueAlong,
+              pathType: current.type,
+              pathValue: current.name,
+              distance: distance,
+              time: NavigationUtils.calculateTime(distanceMeters),
+            ),
+          );
+        }
+      } else {
+        // Last segment or followed by hold - just continue straight
+        steps.add(
+          NavigationStep(
+            direction: Direction.straight,
+            action: NavigationAction.continueAlong,
+            pathType: current.type,
+            pathValue: current.name,
+            distance: distance,
+            time: NavigationUtils.calculateTime(distanceMeters),
+          ),
+        );
+      }
+    }
+
+    return steps;
   }
 
   void advanceStep() {

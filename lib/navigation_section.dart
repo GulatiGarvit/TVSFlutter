@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tvs/data.dart';
+import 'package:tvs/dialogs/taxi_path_selection_dialog.dart';
 import 'package:tvs/navigation_step.dart';
 import 'package:tvs/providers/navigation.dart';
+import 'package:tvs/providers/settings.dart';
 
 class NavigationSection extends StatefulWidget {
   const NavigationSection({super.key});
@@ -11,6 +14,26 @@ class NavigationSection extends StatefulWidget {
 }
 
 class _NavigationSectionState extends State<NavigationSection> {
+  // Set a listener on settings provider to update navigation when unit system changes
+  @override
+  void initState() {
+    super.initState();
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    settingsProvider.addListener(_onSettingsChanged);
+  }
+
+  void _onSettingsChanged() {
+    final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    navProvider.setUnitSystem(settingsProvider.unitSystem);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NavigationProvider>(
@@ -27,7 +50,7 @@ class _NavigationSectionState extends State<NavigationSection> {
                 child:
                     navProvider.isNavigating
                         ? _buildNavigationView(navProvider)
-                        : _buildNoRouteView(navProvider),
+                        : _buildNoRouteView(),
               ),
               if (navProvider.isNavigating) _buildFooter(navProvider),
             ],
@@ -84,59 +107,60 @@ class _NavigationSectionState extends State<NavigationSection> {
     );
   }
 
-  Widget _buildNoRouteView(NavigationProvider navProvider) {
+  Widget _buildNoRouteView() {
     return Center(
-      child: GestureDetector(
-        onTap: () {
-          navProvider.startNavigation([
-            NavigationStep(
-              action: NavigationAction.turn,
-              direction: Direction.right,
-              pathType: PathType.taxiway,
-              pathValue: 'TWY B',
-              distance: 300,
-              time: 120,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.route, size: 64, color: Colors.white38),
+          SizedBox(height: 16),
+          Text(
+            'No Route Set',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
             ),
-            NavigationStep(
-              action: NavigationAction.continueAlong,
-              direction: Direction.straight,
-              pathType: PathType.runway,
-              pathValue: 'RWY 27',
-              distance: 1500,
-              time: 480,
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Set a destination to begin navigation',
+            style: TextStyle(color: Colors.white38, fontSize: 14),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _openPathSelectionDialog,
+            icon: Icon(Icons.add_road),
+            label: Text('Set Route'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue[700],
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
-            NavigationStep(
-              action: NavigationAction.hold,
-              direction: Direction.straight,
-              pathType: PathType.gate,
-              pathValue: 'Gate A5',
-              distance: 200,
-              time: 60,
-            ),
-          ]);
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.route, size: 64, color: Colors.white38),
-            SizedBox(height: 16),
-            Text(
-              'No Route Set',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Set a destination to begin navigation',
-              style: TextStyle(color: Colors.white38, fontSize: 14),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _openPathSelectionDialog() async {
+    final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    final result = await showDialog<List<RawPathSegment>>(
+      context: context,
+      builder:
+          (context) => TaxiPathSelectionDialog(
+            airportData: airportData,
+            airportCode: settingsProvider.airportCode ?? 'KJFK',
+          ),
+    );
+
+    if (result != null && mounted) {
+      navProvider.startNavigation(result);
+    }
   }
 
   Widget _buildNavigationView(NavigationProvider navProvider) {

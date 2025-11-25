@@ -1,12 +1,16 @@
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tvs/direct_camera_feed.dart';
+import 'package:tvs/map/map_navigation_view.dart';
 import 'package:tvs/providers/navigation.dart';
-import 'package:tvs/settings_dialog.dart';
+import 'package:tvs/providers/settings.dart';
+import 'package:tvs/dialogs/settings_dialog.dart';
+import 'package:tvs/utils/coordinate_transformer.dart';
 import 'package:tvs/widgets/clock.dart';
 import 'data_service.dart';
 import 'video_feed.dart';
-import 'feed.dart';
 import 'feed_section.dart';
 import 'navigation_section.dart';
 
@@ -19,17 +23,22 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late final DataService dataService;
+
   late double _defaultNavWidth;
   double? _navWidth;
   late double _minNavWidth;
   late double _maxNavWidth;
 
+  ui.Image? _mapImage; // <--- Loaded PNG
+  CoordinateTransformer? _transform; // <--- Lat/lng transformer
+
   @override
   void initState() {
     super.initState();
-    // Connect once on startup
     dataService = DataService("ws://127.0.0.1:8765");
     dataService.connect();
+
+    _loadMapImage(); // <--- Load PNG asset
   }
 
   @override
@@ -38,12 +47,42 @@ class _DashboardPageState extends State<DashboardPage> {
     super.dispose();
   }
 
+  // -----------------------------------------------------
+  // LOAD PNG AS ui.Image
+  // -----------------------------------------------------
+  Future<void> _loadMapImage() async {
+    final data = await rootBundle.load('assets/kjfk.png');
+    final bytes = data.buffer.asUint8List();
+    final decoded = await decodeImageFromList(bytes);
+
+    // ---- SET YOUR MIN/MAX LAT/LNG HERE ----
+    // top-left corner
+    const maxLat = 40.669243017527556;
+    const minLng = -73.82430283537411;
+
+    // bottom-right corner
+    const minLat = 40.61951825537284;
+    const maxLng = -73.74163620878646;
+
+    setState(() {
+      _mapImage = decoded;
+      _transform = CoordinateTransformer(
+        minLat: minLat,
+        maxLat: maxLat,
+        minLng: minLng,
+        maxLng: maxLng,
+        imageWidth: decoded.width.toDouble(),
+        imageHeight: decoded.height.toDouble(),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     _defaultNavWidth = screenWidth * 0.25;
     _navWidth ??= _defaultNavWidth;
-    _minNavWidth = screenWidth * 0.0;
+    _minNavWidth = 0.0;
     _maxNavWidth = screenWidth * 0.35;
 
     return Scaffold(
@@ -63,14 +102,18 @@ class _DashboardPageState extends State<DashboardPage> {
           actions: [
             IconButton(
               onPressed: () {
-                // Show settings dialog
+                final provider = context.read<SettingsProvider>();
                 showDialog(
                   context: context,
                   barrierDismissible: false,
-                  builder: (context) => const SettingsDialog(),
+                  builder:
+                      (context) => ChangeNotifierProvider.value(
+                        value: provider,
+                        child: const SettingsDialog(),
+                      ),
                 );
               },
-              icon: Icon(Icons.settings_outlined, color: Colors.white),
+              icon: const Icon(Icons.settings_outlined, color: Colors.white),
             ),
           ],
           backgroundColor: Colors.blueGrey,
@@ -79,22 +122,21 @@ class _DashboardPageState extends State<DashboardPage> {
           automaticallyImplyLeading: false,
           elevation: 8,
           shadowColor: Colors.black,
-          flexibleSpace: Container(),
         ),
       ),
       body: Row(
         children: [
+          // NAVIGATION SIDEBAR
           Padding(
-            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0, left: 8.0),
+            padding: const EdgeInsets.only(top: 8, bottom: 8, left: 8),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: _navWidth,
-              child: ChangeNotifierProvider(
-                create: (_) => NavigationProvider(),
-                child: NavigationSection(),
-              ),
+              child: const NavigationSection(),
             ),
           ),
+
+          // DRAG RESIZER
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onHorizontalDragUpdate: (details) {
@@ -120,12 +162,30 @@ class _DashboardPageState extends State<DashboardPage> {
               ),
             ),
           ),
+
+          // MAIN AREA WITH FEEDS + MAP
           Expanded(
             child: FeedSection(
               feeds: [
                 VideoFeed(title: 'Dehazed Feed', dataService: dataService),
                 const DirectCameraFeed(),
-                const Feed(title: 'Feed 3'),
+
+                // --- MAP FEED ---
+                Consumer<NavigationProvider>(
+                  builder: (context, nav, _) {
+                    if (_mapImage == null || _transform == null) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    }
+
+                    return MapNavigationView(
+                      mapImage: _mapImage!,
+                      nav: nav,
+                      transform: _transform!,
+                    );
+                  },
+                ),
               ],
             ),
           ),
