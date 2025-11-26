@@ -31,11 +31,11 @@ class NavigationProvider extends ChangeNotifier {
           _currentLongitude = lng;
           changed = true;
         }
-
-        if (hdg != null && hdg != _currentHeading) {
-          _currentHeading = hdg;
-          changed = true;
-        }
+        // TODO: Uncomment when magnetometer works
+        // if (hdg != null && hdg != _currentHeading) {
+        //   _currentHeading = hdg;
+        //   changed = true;
+        // }
 
         if (changed) {
           if (_isNavigating && _steps.isNotEmpty) {
