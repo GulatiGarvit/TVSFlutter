@@ -8,7 +8,7 @@ import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
 import 'package:tvs/navigation_section.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FullScreen.ensureInitialized();
   runApp(const MyApp());
