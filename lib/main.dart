@@ -6,6 +6,7 @@ import 'package:tvs/providers/navigation.dart';
 import 'package:tvs/providers/settings.dart';
 import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
+import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'package:tvs/navigation_section.dart';
 
 void main() async {
