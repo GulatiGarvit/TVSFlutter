@@ -42,9 +42,9 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() => _isFullscreen = !_isFullscreen);
 
     if (_isFullscreen) {
-      await FullScreen.setFullScreen(true);
+      FullScreen.setFullScreen(true);
     } else {
-      await FullScreen.setFullScreen(false);
+      FullScreen.setFullScreen(false);
     }
   }
 
