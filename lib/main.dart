@@ -9,6 +9,8 @@ import 'package:tvs/feed_section.dart';
 import 'package:tvs/navigation_section.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FullScreen.ensureInitialized();
   runApp(const MyApp());
 }
 
