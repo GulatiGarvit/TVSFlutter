@@ -69,7 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     _defaultNavWidth = screenWidth * 0.25;
     _navWidth ??= _defaultNavWidth;
-    _minNavWidth = 0.0;
+    _minNavWidth = 0.15;
     _maxNavWidth = screenWidth * 0.35;
 
     final settingsProvider = context.read<SettingsProvider>();
