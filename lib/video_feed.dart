@@ -1,4 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'data_service.dart';
+
+enum StreamType { camera, dehazed }
 
 class VideoFeed extends StatefulWidget {
   final String title;
