@@ -22,12 +22,12 @@ class NavigationProvider extends ChangeNotifier {
 
         bool changed = false;
 
-        if (lat != null && lat != _currentLatitude) {
+        if (lat != null && lat != 0.0 && lat != _currentLatitude) {
           _currentLatitude = lat;
           changed = true;
         }
 
-        if (lng != null && lng != _currentLongitude) {
+        if (lng != null && lng != 0.0 && lng != _currentLongitude) {
           _currentLongitude = lng;
           changed = true;
         }
