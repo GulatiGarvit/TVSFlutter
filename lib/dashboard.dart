@@ -94,7 +94,7 @@ class _DashboardPageState extends State<DashboardPage> {
               onPressed: () {
                 showDialog(
                   context: context,
-                  barrierDismissible: false,
+                  barrierDismissible: true,
                   builder:
                       (context) => MultiProvider(
                         providers: [

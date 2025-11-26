@@ -68,7 +68,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     return AlertDialog(
       title: const Text('Settings'),
       content: Container(
-        width: MediaQuery.of(context).size.width * 0.4,
+        width: MediaQuery.of(context).size.width * 0.6,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
