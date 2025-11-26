@@ -3,9 +3,57 @@ import 'package:tvs/data_service.dart';
 import 'package:tvs/dialogs/taxi_path_selection_dialog.dart';
 import 'package:tvs/navigation_step.dart';
 import 'package:tvs/utils/navigation_utils.dart';
+import 'dart:async';
 
 class NavigationProvider extends ChangeNotifier {
-  NavigationProvider(this._dataService);
+  NavigationProvider(this._dataService) {
+    _listenToTelemetry();
+  }
+
+  void _listenToTelemetry() {
+    // Cancel any old subscription (safety)
+    _telemetrySub?.cancel();
+
+    _telemetrySub = _dataService.telemetryStream.listen((data) {
+      try {
+        double? lat = data.lat;
+        double? lng = data.lng;
+        double? hdg = data.heading;
+
+        bool changed = false;
+
+        if (lat != null && lat != _currentLatitude) {
+          _currentLatitude = lat;
+          changed = true;
+        }
+
+        if (lng != null && lng != _currentLongitude) {
+          _currentLongitude = lng;
+          changed = true;
+        }
+
+        if (hdg != null && hdg != _currentHeading) {
+          _currentHeading = hdg;
+          changed = true;
+        }
+
+        if (changed) {
+          if (_isNavigating && _steps.isNotEmpty) {
+            _recalculateNavigation();
+          }
+          notifyListeners();
+        }
+      } catch (e) {
+        print("[NavigationProvider] Telemetry parse error: $e");
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _telemetrySub?.cancel();
+    super.dispose();
+  }
 
   List<NavigationStep> _steps = [];
   List<RawPathSegment> _rawPath = [];
@@ -14,6 +62,7 @@ class NavigationProvider extends ChangeNotifier {
   String _unitSystem = 'Metric';
   Map<String, dynamic>? _airportData;
   DataService _dataService;
+  StreamSubscription? _telemetrySub;
 
   // GPS and Gyro data
   double _currentLatitude = 40.6413;
@@ -75,11 +124,6 @@ class NavigationProvider extends ChangeNotifier {
     _currentStepIndex = 0;
     _isNavigating = true;
     _distanceToNextStep = _steps.isNotEmpty ? _steps[0].distance : 0;
-    notifyListeners();
-  }
-
-  void setDataService(DataService dataService) {
-    _dataService = dataService;
     notifyListeners();
   }
 
