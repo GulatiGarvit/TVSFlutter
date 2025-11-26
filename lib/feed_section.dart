@@ -31,7 +31,9 @@ class _FeedSectionState extends State<FeedSection> {
       ),
       child: Column(
         children: [
-          // Pinned feed at the top
+          // -------------------------
+          // PINNED FEED (LARGE TILE)
+          // -------------------------
           Flexible(
             flex: 2,
             child: AnimatedSwitcher(
@@ -39,20 +41,29 @@ class _FeedSectionState extends State<FeedSection> {
               switchInCurve: Curves.easeOut,
               switchOutCurve: Curves.easeIn,
               child: Container(
-                clipBehavior: Clip.hardEdge,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                ),
+                // Keep the layout size determined by the Flexible parent
                 key: ValueKey(_pinnedFeedIndex),
                 width: double.infinity,
-                child: widget.feeds[_pinnedFeedIndex],
+                // Do not hard-clip the pinned area — allow child to overflow while interacting.
+                // We still show rounded corners by using decoration, but avoid Clip.hardEdge.
+                clipBehavior: Clip.none,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: _buildPinnedChild(
+                  context,
+                  widget.feeds[_pinnedFeedIndex],
+                ),
               ),
             ),
           ),
 
           SizedBox(height: widget.pagePadding),
 
-          // Non-pinned feeds below
+          // -------------------------
+          // ROW OF SMALL FEEDS BELOW
+          // -------------------------
           Flexible(
             flex: 1,
             child: LayoutBuilder(
@@ -60,8 +71,10 @@ class _FeedSectionState extends State<FeedSection> {
                 final totalWidth = constraints.maxWidth;
                 final totalSpacing =
                     (otherFeedIndices.length - 1) * widget.pagePadding;
-                final itemWidth =
-                    (totalWidth - totalSpacing) / otherFeedIndices.length;
+                // Prevent division by zero
+                final safeCount =
+                    otherFeedIndices.isEmpty ? 1 : otherFeedIndices.length;
+                final itemWidth = (totalWidth - totalSpacing) / safeCount;
 
                 return ListView.separated(
                   scrollDirection: Axis.horizontal,
@@ -84,10 +97,13 @@ class _FeedSectionState extends State<FeedSection> {
                         clipBehavior: Clip.hardEdge,
                         height: 80,
                         decoration: BoxDecoration(
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(4),
                         ),
+
+                        // Keep the small feeds non-interactive (original behavior)
                         child: IgnorePointer(
-                          // Ignore interactions on small feeds
+                          ignoring: true,
                           child: widget.feeds[actualIndex],
                         ),
                       ),
@@ -98,6 +114,19 @@ class _FeedSectionState extends State<FeedSection> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Builds the pinned child. We align the child top-left so that map widgets
+  /// which rely on intrinsic sizes can behave correctly. Non-map children
+  /// will continue to layout normally.
+  Widget _buildPinnedChild(BuildContext context, Widget child) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        color: Colors.black, // Background color for letterboxing
+        child: Center(child: child),
       ),
     );
   }

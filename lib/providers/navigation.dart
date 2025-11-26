@@ -1,26 +1,32 @@
 import 'package:flutter/foundation.dart';
+import 'package:tvs/data_service.dart';
 import 'package:tvs/dialogs/taxi_path_selection_dialog.dart';
 import 'package:tvs/navigation_step.dart';
 import 'package:tvs/utils/navigation_utils.dart';
 
 class NavigationProvider extends ChangeNotifier {
+  NavigationProvider(this._dataService);
+
   List<NavigationStep> _steps = [];
   List<RawPathSegment> _rawPath = [];
   int _currentStepIndex = 0;
   bool _isNavigating = false;
   String _unitSystem = 'Metric';
   Map<String, dynamic>? _airportData;
+  DataService _dataService;
 
   // GPS and Gyro data
-  double _currentLatitude = 0.0;
-  double _currentLongitude = 0.0;
+  double _currentLatitude = 40.6413;
+  double _currentLongitude = -73.7781;
   double _currentHeading = 0.0;
   int _distanceToNextStep = 0;
 
   double get currentLatitude => _currentLatitude;
   double get heading => _currentHeading;
   double get currentLongitude => _currentLongitude;
+  double get currentHeading => _currentHeading;
   List<RawPathSegment> get rawPath => _rawPath;
+  DataService get dataService => _dataService;
 
   List<NavigationStep> get steps => _steps;
   int get currentStepIndex => _currentStepIndex;
@@ -69,6 +75,11 @@ class NavigationProvider extends ChangeNotifier {
     _currentStepIndex = 0;
     _isNavigating = true;
     _distanceToNextStep = _steps.isNotEmpty ? _steps[0].distance : 0;
+    notifyListeners();
+  }
+
+  void setDataService(DataService dataService) {
+    _dataService = dataService;
     notifyListeners();
   }
 

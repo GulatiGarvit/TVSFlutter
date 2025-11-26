@@ -5,6 +5,10 @@ const airportData = {
     "runways": ["04L-22R", "04R-22L", "13L-31R", "13R-31L"],
     "aprons": ["Terminal 1 Apron", "Terminal 4 Apron", "Terminal 8 Apron"],
     "gates": ["Gate 1", "Gate 2", "Gate 4", "Gate 8A", "Gate 8B"],
+    "minLat": 40.61951825537284,
+    "maxLat": 40.669243017527556,
+    "minLng": -73.82430283537411,
+    "maxLng": -73.74163620878646,
 
     // Segments represent the start and end coordinates of each taxiway/runway
     "segments": {
@@ -236,6 +240,12 @@ const airportData = {
   "LAX": {
     "name": "Los Angeles International Airport",
     "taxiways": ["D", "E", "F", "G1", "H2"],
+    "maxLat": 33.95926793622337,
+    "minLat": 33.924714272922294,
+    "maxLng": -118.36609493946142,
+    "minLng": -118.44768959832666,
     // ...
+    // 33.95926793622337, -118.44768959832666
+    // 33.924714272922294, -118.36609493946142
   },
 };

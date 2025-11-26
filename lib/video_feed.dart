@@ -2,11 +2,19 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'data_service.dart';
 
+enum StreamType { camera, dehazed }
+
 class VideoFeed extends StatelessWidget {
   final String title;
   final DataService dataService;
+  final StreamType streamType;
 
-  const VideoFeed({super.key, required this.title, required this.dataService});
+  const VideoFeed({
+    super.key,
+    required this.title,
+    required this.dataService,
+    required this.streamType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +22,10 @@ class VideoFeed extends StatelessWidget {
       color: Colors.black,
       alignment: Alignment.center,
       child: StreamBuilder<Uint8List>(
-        stream: dataService.cameraStream,
+        stream:
+            streamType == StreamType.camera
+                ? dataService.cameraStream
+                : dataService.dehazedStream,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return Text(

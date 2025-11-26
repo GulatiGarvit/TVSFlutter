@@ -84,7 +84,7 @@ class _NavigationSectionState extends State<NavigationSection> {
                 IconButton(
                   icon: Icon(Icons.edit, color: Colors.white70, size: 20),
                   onPressed: () {
-                    // TODO: Implement edit navigation
+                    _openPathSelectionDialog(true);
                   },
                   tooltip: 'Edit Route',
                   padding: EdgeInsets.all(4),
@@ -143,7 +143,7 @@ class _NavigationSectionState extends State<NavigationSection> {
     );
   }
 
-  Future<void> _openPathSelectionDialog() async {
+  Future<void> _openPathSelectionDialog([bool isEditing = false]) async {
     final navProvider = Provider.of<NavigationProvider>(context, listen: false);
     final settingsProvider = Provider.of<SettingsProvider>(
       context,
@@ -155,6 +155,7 @@ class _NavigationSectionState extends State<NavigationSection> {
           (context) => TaxiPathSelectionDialog(
             airportData: airportData,
             airportCode: settingsProvider.airportCode ?? 'KJFK',
+            existingPath: isEditing ? navProvider.rawPath : null,
           ),
     );
 

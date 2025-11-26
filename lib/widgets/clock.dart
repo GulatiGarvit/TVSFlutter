@@ -11,7 +11,7 @@ class ClockWidget extends StatelessWidget {
       stream: Stream.periodic(const Duration(seconds: 1)),
       builder: (context, snapshot) {
         return Text(
-          DateFormat('EEE, dd MMM yyyy – HH:mm:ss').format(DateTime.now()),
+          DateFormat('EEE, dd MMM yyyy - HH:mm:ss').format(DateTime.now()),
           style: textStyle,
         );
       },

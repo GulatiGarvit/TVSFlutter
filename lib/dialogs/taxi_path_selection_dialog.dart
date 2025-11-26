@@ -4,16 +4,17 @@ import 'package:tvs/navigation_step.dart';
 class TaxiPathSelectionDialog extends StatefulWidget {
   final Map<String, dynamic> airportData;
   final String airportCode;
+  final List<RawPathSegment>? existingPath;
 
   const TaxiPathSelectionDialog({
     super.key,
     required this.airportData,
     required this.airportCode,
+    this.existingPath,
   });
 
   @override
-  State<TaxiPathSelectionDialog> createState() =>
-      _TaxiPathSelectionDialogState();
+  State<TaxiPathSelectionDialog> createState() => _TaxiPathSelectionDialogState();
 }
 
 class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
@@ -26,44 +27,51 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
   void initState() {
     super.initState();
     _initializeAvailablePaths();
+    _loadExistingPath();
   }
 
   void _initializeAvailablePaths() {
     final airport = widget.airportData[widget.airportCode];
     if (airport != null) {
       _availablePaths = {};
-
-      // Add all taxiways
+      
       if (airport['taxiways'] != null) {
         _availablePaths.addAll(List<String>.from(airport['taxiways']));
       }
-
-      // Add all runways
       if (airport['runways'] != null) {
         _availablePaths.addAll(List<String>.from(airport['runways']));
       }
-
-      // Add all aprons
       if (airport['aprons'] != null) {
         _availablePaths.addAll(List<String>.from(airport['aprons']));
       }
-
-      // Add all gates
       if (airport['gates'] != null) {
         _availablePaths.addAll(List<String>.from(airport['gates']));
       }
     }
   }
 
+  void _loadExistingPath() {
+    if (widget.existingPath != null && widget.existingPath!.isNotEmpty) {
+      _selectedPaths = widget.existingPath!.map((segment) {
+        return SelectedPath(
+          name: segment.name,
+          type: segment.type,
+          action: segment.action,
+        );
+      }).toList();
+      
+      _currentPath = _selectedPaths.last.name;
+      _updateAvailablePaths();
+    }
+  }
+
   void _selectPath(String path, PathType type) {
     setState(() {
-      _selectedPaths.add(
-        SelectedPath(
-          name: path,
-          type: type,
-          action: NavigationAction.continueAlong,
-        ),
-      );
+      _selectedPaths.add(SelectedPath(
+        name: path,
+        type: type,
+        action: NavigationAction.continueAlong,
+      ));
       _currentPath = path;
       _updateAvailablePaths();
     });
@@ -72,13 +80,11 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
   void _addHold() {
     if (_currentPath != null) {
       setState(() {
-        _selectedPaths.add(
-          SelectedPath(
-            name: _currentPath!,
-            type: _selectedPaths.last.type,
-            action: NavigationAction.hold,
-          ),
-        );
+        _selectedPaths.add(SelectedPath(
+          name: _currentPath!,
+          type: _selectedPaths.last.type,
+          action: NavigationAction.hold,
+        ));
       });
     }
   }
@@ -138,25 +144,22 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
       final segmentCoords = segments[selected.name] as List<dynamic>?;
       if (segmentCoords == null || segmentCoords.length < 2) continue;
 
-      rawPath.add(
-        RawPathSegment(
-          name: selected.name,
-          type: selected.type,
-          action: selected.action,
-          coordinates: [
-            [segmentCoords[0][0].toDouble(), segmentCoords[0][1].toDouble()],
-            [segmentCoords[1][0].toDouble(), segmentCoords[1][1].toDouble()],
-          ],
-        ),
-      );
+      rawPath.add(RawPathSegment(
+        name: selected.name,
+        type: selected.type,
+        action: selected.action,
+        coordinates: [
+          [segmentCoords[0][0].toDouble(), segmentCoords[0][1].toDouble()],
+          [segmentCoords[1][0].toDouble(), segmentCoords[1][1].toDouble()],
+        ],
+      ));
     }
 
     return rawPath;
   }
 
   PathType _getPathType(String pathName) {
-    if (pathName.toLowerCase().startsWith('rwy') ||
-        pathName.contains(RegExp(r'^\d{2}[LCR]?$'))) {
+    if (pathName.contains('-') || pathName.contains(RegExp(r'^\d{2}[LCR]?$'))) {
       return PathType.runway;
     } else if (pathName.toLowerCase().contains('gate')) {
       return PathType.gate;
@@ -212,7 +215,7 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Set Taxi Route',
+                  widget.existingPath != null ? 'Edit Taxi Route' : 'Set Taxi Route',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -221,7 +224,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
                 ),
                 Text(
                   '${widget.airportCode} - Select paths in sequence',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -244,7 +250,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
             _selectedPaths.isEmpty
                 ? 'Select your starting taxiway or runway'
                 : 'Select next path or action',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
           ),
         ),
         Expanded(
@@ -429,33 +438,36 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
           ),
           SizedBox(height: 16),
           Expanded(
-            child:
-                _selectedPaths.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.map, size: 48, color: Colors.white24),
-                          SizedBox(height: 12),
-                          Text(
-                            'No paths selected',
-                            style: TextStyle(
-                              color: Colors.white38,
-                              fontSize: 13,
-                            ),
+            child: _selectedPaths.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.map,
+                          size: 48,
+                          color: Colors.white24,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'No paths selected',
+                          style: TextStyle(
+                            color: Colors.white38,
+                            fontSize: 13,
                           ),
-                        ],
-                      ),
-                    )
-                    : ListView.builder(
-                      itemCount: _selectedPaths.length,
-                      itemBuilder: (context, index) {
-                        return _buildSelectedPathItem(
-                          _selectedPaths[index],
-                          index,
-                        );
-                      },
+                        ),
+                      ],
                     ),
+                  )
+                : ListView.builder(
+                    itemCount: _selectedPaths.length,
+                    itemBuilder: (context, index) {
+                      return _buildSelectedPathItem(
+                        _selectedPaths[index],
+                        index,
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -466,29 +478,35 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
     Color color;
     String typeLabel;
 
-    switch (path.type) {
-      case PathType.runway:
-        color = Colors.red[400]!;
-        typeLabel = 'RWY';
-        break;
-      case PathType.apron:
-        color = Colors.green[400]!;
-        typeLabel = 'APRON';
-        break;
-      case PathType.gate:
-        color = Colors.blue[400]!;
-        typeLabel = 'GATE';
-        break;
-      case PathType.taxiway:
-      default:
-        color = Colors.yellow[400]!;
-        typeLabel = 'TWY';
-        break;
+    if (path.action == NavigationAction.hold) {
+      color = Colors.orange[400]!;
+      typeLabel = 'HLD';
+    } else {
+      switch (path.type) {
+        case PathType.runway:
+          color = Colors.red[400]!;
+          typeLabel = 'RWY';
+          break;
+        case PathType.apron:
+          color = Colors.green[400]!;
+          typeLabel = 'APRON';
+          break;
+        case PathType.gate:
+          color = Colors.blue[400]!;
+          typeLabel = 'GATE';
+          break;
+        case PathType.taxiway:
+        default:
+          color = Colors.yellow[400]!;
+          typeLabel = 'TWY';
+          break;
+      }
     }
 
     final isLast = index == _selectedPaths.length - 1;
-    final actionText =
-        path.action == NavigationAction.hold ? 'Hold Short' : 'Continue';
+    final actionText = path.action == NavigationAction.hold
+        ? 'Hold Short'
+        : 'Continue';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -498,7 +516,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
             Container(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
               child: Center(
                 child: Text(
                   '${index + 1}',
@@ -511,7 +532,11 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
               ),
             ),
             if (!isLast)
-              Container(width: 2, height: 40, color: color.withOpacity(0.3)),
+              Container(
+                width: 2,
+                height: 40,
+                color: color.withOpacity(0.3),
+              ),
           ],
         ),
         SizedBox(width: 12),
@@ -546,7 +571,7 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
                     SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        path.name,
+                        path.action == NavigationAction.hold ? 'Hold Short' : path.name,
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -559,7 +584,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
                 SizedBox(height: 4),
                 Text(
                   actionText,
-                  style: TextStyle(color: Colors.white60, fontSize: 11),
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -582,7 +610,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
             TextButton.icon(
               onPressed: _removeLastPath,
               icon: Icon(Icons.undo, color: Colors.white70),
-              label: Text('Undo', style: TextStyle(color: Colors.white70)),
+              label: Text(
+                'Undo',
+                style: TextStyle(color: Colors.white70),
+              ),
               style: TextButton.styleFrom(
                 backgroundColor: Colors.blueGrey[700],
               ),
@@ -590,7 +621,10 @@ class _TaxiPathSelectionDialogState extends State<TaxiPathSelectionDialog> {
           Spacer(),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           SizedBox(width: 12),
           ElevatedButton.icon(
@@ -615,14 +649,18 @@ class SelectedPath {
   final PathType type;
   final NavigationAction action;
 
-  SelectedPath({required this.name, required this.type, required this.action});
+  SelectedPath({
+    required this.name,
+    required this.type,
+    required this.action,
+  });
 }
 
 class RawPathSegment {
   final String name;
   final PathType type;
   final NavigationAction action;
-  final List<List<double>> coordinates; // [[lat, lng], [lat, lng]]
+  final List<List<double>> coordinates;
 
   RawPathSegment({
     required this.name,

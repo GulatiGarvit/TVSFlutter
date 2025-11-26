@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tvs/data.dart';
 import 'package:tvs/direct_camera_feed.dart';
 import 'package:tvs/map/map_navigation_view.dart';
 import 'package:tvs/providers/navigation.dart';
@@ -22,59 +23,45 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  late final DataService dataService;
-
   late double _defaultNavWidth;
   double? _navWidth;
   late double _minNavWidth;
   late double _maxNavWidth;
 
-  ui.Image? _mapImage; // <--- Loaded PNG
-  CoordinateTransformer? _transform; // <--- Lat/lng transformer
-
   @override
   void initState() {
     super.initState();
-    dataService = DataService("ws://127.0.0.1:8765");
-    dataService.connect();
-
-    _loadMapImage(); // <--- Load PNG asset
   }
 
   @override
   void dispose() {
-    dataService.dispose();
     super.dispose();
   }
 
   // -----------------------------------------------------
-  // LOAD PNG AS ui.Image
+  // LOAD MAP PNG + TRANSFORMER for selected airport
   // -----------------------------------------------------
-  Future<void> _loadMapImage() async {
-    final data = await rootBundle.load('assets/kjfk.png');
+  Future<Map<String, dynamic>> _loadMapImageFor(String airportCode) async {
+    final data = await rootBundle.load('assets/$airportCode.png');
     final bytes = data.buffer.asUint8List();
     final decoded = await decodeImageFromList(bytes);
 
-    // ---- SET YOUR MIN/MAX LAT/LNG HERE ----
-    // top-left corner
-    const maxLat = 40.669243017527556;
-    const minLng = -73.82430283537411;
+    final airport = airportData[airportCode]!;
+    final maxLat = airport['maxLat'] as double;
+    final minLng = airport['minLng'] as double;
+    final minLat = airport['minLat'] as double;
+    final maxLng = airport['maxLng'] as double;
 
-    // bottom-right corner
-    const minLat = 40.61951825537284;
-    const maxLng = -73.74163620878646;
+    final transformer = CoordinateTransformer(
+      minLat: minLat,
+      maxLat: maxLat,
+      minLng: minLng,
+      maxLng: maxLng,
+      imageWidth: decoded.width.toDouble(),
+      imageHeight: decoded.height.toDouble(),
+    );
 
-    setState(() {
-      _mapImage = decoded;
-      _transform = CoordinateTransformer(
-        minLat: minLat,
-        maxLat: maxLat,
-        minLng: minLng,
-        maxLng: maxLng,
-        imageWidth: decoded.width.toDouble(),
-        imageHeight: decoded.height.toDouble(),
-      );
-    });
+    return {"image": decoded, "transform": transformer};
   }
 
   @override
@@ -84,6 +71,9 @@ class _DashboardPageState extends State<DashboardPage> {
     _navWidth ??= _defaultNavWidth;
     _minNavWidth = 0.0;
     _maxNavWidth = screenWidth * 0.35;
+
+    final settingsProvider = context.read<SettingsProvider>();
+    final navigationProvider = context.read<NavigationProvider>();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade900,
@@ -102,13 +92,17 @@ class _DashboardPageState extends State<DashboardPage> {
           actions: [
             IconButton(
               onPressed: () {
-                final provider = context.read<SettingsProvider>();
                 showDialog(
                   context: context,
                   barrierDismissible: false,
                   builder:
-                      (context) => ChangeNotifierProvider.value(
-                        value: provider,
+                      (context) => MultiProvider(
+                        providers: [
+                          ChangeNotifierProvider.value(value: settingsProvider),
+                          ChangeNotifierProvider.value(
+                            value: navigationProvider,
+                          ),
+                        ],
                         child: const SettingsDialog(),
                       ),
                 );
@@ -167,22 +161,38 @@ class _DashboardPageState extends State<DashboardPage> {
           Expanded(
             child: FeedSection(
               feeds: [
-                VideoFeed(title: 'Dehazed Feed', dataService: dataService),
-                const DirectCameraFeed(),
+                VideoFeed(
+                  title: 'Dehazed Feed',
+                  dataService: navigationProvider.dataService,
+                  streamType: StreamType.dehazed,
+                ),
+                VideoFeed(
+                  title: "Camera Feed",
+                  dataService: navigationProvider.dataService,
+                  streamType: StreamType.camera,
+                ),
 
-                // --- MAP FEED ---
-                Consumer<NavigationProvider>(
-                  builder: (context, nav, _) {
-                    if (_mapImage == null || _transform == null) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      );
-                    }
+                // ------------------ MAP ------------------
+                Consumer2<SettingsProvider, NavigationProvider>(
+                  builder: (context, settings, nav, _) {
+                    return FutureBuilder<Map<String, dynamic>>(
+                      future: _loadMapImageFor(settings.airportCode),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          );
+                        }
 
-                    return MapNavigationView(
-                      mapImage: _mapImage!,
-                      nav: nav,
-                      transform: _transform!,
+                        final mapData = snapshot.data!;
+                        return MapNavigationView(
+                          mapImage: mapData['image'],
+                          nav: nav,
+                          transform: mapData['transform'],
+                        );
+                      },
                     );
                   },
                 ),

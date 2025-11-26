@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 class SettingsProvider extends ChangeNotifier {
   bool _isDarkMode = true;
-  String? _airportCode;
+  String _airportCode = "KJFK";
   String _unitSystem = "Nautical";
 
   bool get isDarkMode => _isDarkMode;
-  String? get airportCode => _airportCode;
+  String get airportCode => _airportCode;
   String get unitSystem => _unitSystem;
 
   void toggleDarkMode() {
