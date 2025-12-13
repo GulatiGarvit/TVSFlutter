@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'package:provider/provider.dart';
+import 'package:tvs/widgets/demo_video_player.dart';
+import 'package:video_player/video_player.dart';
 
 import 'package:tvs/data.dart';
-import 'package:tvs/direct_camera_feed.dart';
 import 'package:tvs/map/map_navigation_view.dart';
 import 'package:tvs/providers/navigation.dart';
 import 'package:tvs/providers/settings.dart';
@@ -13,7 +14,6 @@ import 'package:tvs/dialogs/settings_dialog.dart';
 import 'package:tvs/utils/coordinate_transformer.dart';
 import 'package:tvs/widgets/clock.dart';
 
-import 'data_service.dart';
 import 'video_feed.dart';
 import 'feed_section.dart';
 import 'navigation_section.dart';
@@ -32,24 +32,70 @@ class _DashboardPageState extends State<DashboardPage> {
   late double _maxNavWidth;
 
   bool _isFullscreen = false;
+  bool _isDemoMode = false;
+
+  VideoPlayerController? _demoDehazedController;
+  VideoPlayerController? _demoCameraController;
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  Future<void> _toggleFullscreen() async {
-    setState(() => _isFullscreen = !_isFullscreen);
-
-    if (_isFullscreen) {
-      FullScreen.setFullScreen(true);
-    } else {
-      FullScreen.setFullScreen(false);
-    }
+  void dispose() {
+    _disposeDemoVideos();
+    super.dispose();
   }
 
   // -----------------------------------------------------
-  // LOAD MAP PNG + TRANSFORMER for selected airport
+  // FULLSCREEN
+  // -----------------------------------------------------
+  Future<void> _toggleFullscreen() async {
+    setState(() => _isFullscreen = !_isFullscreen);
+    FullScreen.setFullScreen(_isFullscreen);
+  }
+
+  // -----------------------------------------------------
+  // DEMO VIDEOS (SYNCED LOOP)
+  // -----------------------------------------------------
+  Future<void> _initDemoVideos() async {
+    _demoDehazedController = VideoPlayerController.asset(
+      'assets/defogged_trimmed_fixed.mp4',
+    );
+    _demoCameraController = VideoPlayerController.asset(
+      'assets/trimmed_fixed.mp4',
+    );
+
+    await Future.wait([
+      _demoDehazedController!.initialize(),
+      _demoCameraController!.initialize(),
+    ]);
+
+    void syncLoop() {
+      final d = _demoDehazedController!;
+      final c = _demoCameraController!;
+
+      if (d.value.position >= d.value.duration &&
+          c.value.position >= c.value.duration) {
+        d.seekTo(Duration.zero);
+        c.seekTo(Duration.zero);
+        d.play();
+        c.play();
+      }
+    }
+
+    _demoDehazedController!.addListener(syncLoop);
+    _demoCameraController!.addListener(syncLoop);
+
+    _demoDehazedController!.play();
+    _demoCameraController!.play();
+  }
+
+  void _disposeDemoVideos() {
+    _demoDehazedController?.dispose();
+    _demoCameraController?.dispose();
+    _demoDehazedController = null;
+    _demoCameraController = null;
+  }
+
+  // -----------------------------------------------------
+  // MAP IMAGE + TRANSFORMER
   // -----------------------------------------------------
   Future<Map<String, dynamic>> _loadMapImageFor(String airportCode) async {
     final data = await rootBundle.load('assets/$airportCode.png');
@@ -57,29 +103,23 @@ class _DashboardPageState extends State<DashboardPage> {
     final decoded = await decodeImageFromList(bytes);
 
     final airport = airportData[airportCode]!;
-    final maxLat = airport['maxLat'] as double;
-    final minLng = airport['minLng'] as double;
-    final minLat = airport['minLat'] as double;
-    final maxLng = airport['maxLng'] as double;
 
     final transformer = CoordinateTransformer(
-      minLat: minLat,
-      maxLat: maxLat,
-      minLng: minLng,
-      maxLng: maxLng,
+      minLat: airport['minLat'] as double,
+      maxLat: airport['maxLat'] as double,
+      minLng: airport['minLng'] as double,
+      maxLng: airport['maxLng'] as double,
       imageWidth: decoded.width.toDouble(),
       imageHeight: decoded.height.toDouble(),
     );
 
-    return {
-      "image": decoded,
-      "transform": transformer,
-    };
+    return {"image": decoded, "transform": transformer};
   }
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+
     _defaultNavWidth = screenWidth * 0.25;
     _navWidth ??= _defaultNavWidth;
     _minNavWidth = screenWidth * 0.15;
@@ -94,20 +134,18 @@ class _DashboardPageState extends State<DashboardPage> {
         preferredSize: const Size.fromHeight(40),
         child: AppBar(
           backgroundColor: Colors.blueGrey,
-          centerTitle: true,
           elevation: 8,
-          shadowColor: Colors.black,
           toolbarHeight: 40,
           automaticallyImplyLeading: false,
+          centerTitle: true,
 
           leading: const Padding(
-            padding: EdgeInsets.only(left: 12.0, top: 8.0, bottom: 8.0),
+            padding: EdgeInsets.only(left: 12, top: 8, bottom: 8),
             child: ClockWidget(textStyle: TextStyle(color: Colors.white)),
           ),
           leadingWidth: 200,
 
           title: GestureDetector(
-            behavior: HitTestBehavior.opaque,
             onTap: _toggleFullscreen,
             child: const Text(
               'TVS Dashboard',
@@ -116,19 +154,40 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
 
           actions: [
+            Row(
+              children: [
+                const Text("LIVE", style: TextStyle(color: Colors.white)),
+                Switch(
+                  value: _isDemoMode,
+                  activeColor: Colors.greenAccent,
+                  onChanged: (value) async {
+                    setState(() => _isDemoMode = value);
+                    if (_isDemoMode) {
+                      await _initDemoVideos();
+                    } else {
+                      _disposeDemoVideos();
+                    }
+                  },
+                ),
+                const Text("DEMO", style: TextStyle(color: Colors.white)),
+              ],
+            ),
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white),
               onPressed: () {
                 showDialog(
                   context: context,
                   barrierDismissible: true,
-                  builder: (context) => MultiProvider(
-                    providers: [
-                      ChangeNotifierProvider.value(value: settingsProvider),
-                      ChangeNotifierProvider.value(value: navigationProvider),
-                    ],
-                    child: const SettingsDialog(),
-                  ),
+                  builder:
+                      (_) => MultiProvider(
+                        providers: [
+                          ChangeNotifierProvider.value(value: settingsProvider),
+                          ChangeNotifierProvider.value(
+                            value: navigationProvider,
+                          ),
+                        ],
+                        child: const SettingsDialog(),
+                      ),
                 );
               },
             ),
@@ -138,9 +197,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
       body: Row(
         children: [
-          // ----------------------- NAVIGATION SIDEBAR -----------------------
+          // ---------------- NAVIGATION SIDEBAR ----------------
           Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 8, left: 8),
+            padding: const EdgeInsets.all(8),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               width: _navWidth,
@@ -148,13 +207,15 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
 
-          // ---------------------- RESIZE HANDLE ----------------------------
+          // ---------------- RESIZE HANDLE ----------------
           GestureDetector(
             behavior: HitTestBehavior.translucent,
             onHorizontalDragUpdate: (details) {
               setState(() {
-                _navWidth = (_navWidth! + details.delta.dx)
-                    .clamp(_minNavWidth, _maxNavWidth);
+                _navWidth = (_navWidth! + details.delta.dx).clamp(
+                  _minNavWidth,
+                  _maxNavWidth,
+                );
               });
             },
             onTap: () => setState(() => _navWidth = _defaultNavWidth),
@@ -173,22 +234,33 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
 
-          // ----------------------- MAIN SECTION -----------------------------
+          // ---------------- MAIN SECTION ----------------
           Expanded(
             child: FeedSection(
               feeds: [
-                VideoFeed(
-                  title: 'Dehazed Feed',
-                  dataService: navigationProvider.dataService,
-                  streamType: StreamType.dehazed,
-                ),
-                VideoFeed(
-                  title: "Camera Feed",
-                  dataService: navigationProvider.dataService,
-                  streamType: StreamType.camera,
-                ),
+                if (!_isDemoMode) ...[
+                  VideoFeed(
+                    title: 'Dehazed Feed',
+                    dataService: navigationProvider.dataService,
+                    streamType: StreamType.dehazed,
+                  ),
+                  VideoFeed(
+                    title: 'Camera Feed',
+                    dataService: navigationProvider.dataService,
+                    streamType: StreamType.camera,
+                  ),
+                ] else ...[
+                  DemoVideoPlayer(
+                    title: 'Demo – Dehazed',
+                    controller: _demoDehazedController!,
+                  ),
+                  DemoVideoPlayer(
+                    title: 'Demo – Camera',
+                    controller: _demoCameraController!,
+                  ),
+                ],
 
-                // ----------------------- MAP SECTION -----------------------
+                // ---------------- MAP (UNCHANGED) ----------------
                 Consumer2<SettingsProvider, NavigationProvider>(
                   builder: (context, settings, nav, _) {
                     return FutureBuilder<Map<String, dynamic>>(
@@ -197,7 +269,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         if (!snapshot.hasData) {
                           return const Center(
                             child: CircularProgressIndicator(
-                              color: Colors.white),
+                              color: Colors.white,
+                            ),
                           );
                         }
 
