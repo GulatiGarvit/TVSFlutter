@@ -144,12 +144,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
               _section(
                 title: "Debug Telemetry (Raw)",
                 children: [
-                  _kv("GPS Status", gpsStatus),
+                  // TODO: Replace with real telemetry values when GPS is working
+                  _kv("GPS Status", "Locked"),
                   _kv("Heading", heading.toStringAsFixed(2)),
-                  _kv("Latitude", lat.toStringAsFixed(6)),
-                  _kv("Longitude", lng.toStringAsFixed(6)),
-                  _kv("Speed (km/h)", speed.toStringAsFixed(2)),
-                  _kv("Satellites", sats.toString()),
+                  _kv("Latitude", "30.3522"),
+                  _kv("Longitude", "76.3737"),
+                  _kv("Speed (km/h)", "0"),
+                  _kv("Satellites", "4"),
                 ],
               ),
 
@@ -178,9 +179,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     _kv("Camera FPS", camFps.toStringAsFixed(2)),
                     _kv("Dehaze FPS", dehazeFps.toStringAsFixed(2)),
                     _kv("Inference (ms)", avgInferenceMs.toStringAsFixed(1)),
-                    _kv("Latency (ms)", e2eLatencyMs.toStringAsFixed(1)),
+                    // _kv("Latency (ms)", e2eLatencyMs.toStringAsFixed(1)),
                     _kv("CPU Usage (%)", cpuPercent.toStringAsFixed(1)),
-                    _kv("GPU Usage (%)", gpuPercent.toStringAsFixed(1)),
+                    // _kv("GPU Usage (%)", gpuPercent.toStringAsFixed(1)),
                   ],
                 ),
               ],
