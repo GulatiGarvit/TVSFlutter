@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:tvs/data.dart';
 import 'package:tvs/providers/navigation.dart';
 import 'package:tvs/providers/settings.dart';
+import 'package:tvs/utils/server_controller.dart';
 import 'package:tvs/widgets/box_radio_group.dart';
 
 class SettingsDialog extends StatefulWidget {
@@ -67,137 +69,186 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
     return AlertDialog(
       title: const Text('Settings'),
-      content: Container(
+      content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.6,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ---------------- AIRPORT SELECTOR ----------------
-            Row(
-              children: [
-                Text(
-                  "Select Airport: ",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownSearch<String>(
-                    items:
-                        (f, cs) =>
-                            airportData.entries
-                                .map((e) => "${e.key} - ${e.value['name']}")
-                                .toList(),
-                    selectedItem: _selectedAirport,
-                    popupProps: const PopupProps.menu(
-                      showSearchBox: true,
-                      searchFieldProps: TextFieldProps(
-                        decoration: InputDecoration(
-                          labelText: 'Search airport',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                    decoratorProps: const DropDownDecoratorProps(
-                      decoration: InputDecoration(border: OutlineInputBorder()),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedAirport = value;
-                        if (_selectedAirport == null) return;
-
-                        context.read<SettingsProvider>().setAirportCode(
-                          _selectedAirport!.split(" - ")[0],
-                        );
-
-                        // Clear any existing navigation
-                        context.read<NavigationProvider>().stopNavigation();
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // ---------------- UNITS SELECTOR ----------------
-            Row(
-              children: [
-                Text(
-                  "Measurement Units: ",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: BoxRadioGroup(
-                    options: ["Nautical", "Metric", "Imperial"],
-                    selected: _selectedUnit,
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedUnit = value;
-                        context.read<SettingsProvider>().setUnitSystem(value);
-                      });
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            // ---------------- RAW DEBUG TELEMETRY ----------------
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: Colors.grey.shade400),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ---------------- AIRPORT SELECTOR ----------------
+              Row(
                 children: [
                   Text(
-                    "Debug Telemetry (Raw)",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Colors.black87,
+                    "Select Airport: ",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownSearch<String>(
+                      items:
+                          (f, cs) =>
+                              airportData.entries
+                                  .map((e) => "${e.key} - ${e.value['name']}")
+                                  .toList(),
+                      selectedItem: _selectedAirport,
+                      popupProps: const PopupProps.menu(
+                        showSearchBox: true,
+                        searchFieldProps: TextFieldProps(
+                          decoration: InputDecoration(
+                            labelText: 'Search airport',
+                            prefixIcon: Icon(Icons.search),
+                          ),
+                        ),
+                      ),
+                      decoratorProps: const DropDownDecoratorProps(
+                        decoration: InputDecoration(border: OutlineInputBorder()),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedAirport = value;
+                          if (_selectedAirport == null) return;
+          
+                          context.read<SettingsProvider>().setAirportCode(
+                            _selectedAirport!.split(" - ")[0],
+                          );
+          
+                          // Clear any existing navigation
+                          context.read<NavigationProvider>().stopNavigation();
+                        });
+                      },
                     ),
                   ),
-                  const SizedBox(height: 8),
-
-                  _kv("GPS Status", gpsStatus),
-                  _kv("Heading", heading.toStringAsFixed(2)),
-                  _kv("Latitude", lat.toStringAsFixed(6)),
-                  _kv("Longitude", lng.toStringAsFixed(6)),
-                  _kv("Speed (km/h)", speed.toStringAsFixed(2)),
-                  _kv("Satellites", sats.toString()),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ---------------- CLOSE BUTTON ----------------
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
+          
+              const SizedBox(height: 16),
+          
+              // ---------------- UNITS SELECTOR ----------------
+              Row(
+                children: [
+                  Text(
+                    "Measurement Units: ",
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  backgroundColor: Colors.blueGrey,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: BoxRadioGroup(
+                      options: ["Nautical", "Metric", "Imperial"],
+                      selected: _selectedUnit,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedUnit = value;
+                          context.read<SettingsProvider>().setUnitSystem(value);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+          
+              const SizedBox(height: 24),
+          
+              // ---------------- RAW DEBUG TELEMETRY ----------------
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade400),
                 ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(color: Colors.white),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Debug Telemetry (Raw)",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+          
+                    _kv("GPS Status", gpsStatus),
+                    _kv("Heading", heading.toStringAsFixed(2)),
+                    _kv("Latitude", lat.toStringAsFixed(6)),
+                    _kv("Longitude", lng.toStringAsFixed(6)),
+                    _kv("Speed (km/h)", speed.toStringAsFixed(2)),
+                    _kv("Satellites", sats.toString()),
+                  ],
                 ),
               ),
-            ),
-          ],
+          
+              const SizedBox(height: 24),
+          
+              // ---------------- CLOSE BUTTON ----------------
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    backgroundColor: Colors.blueGrey,
+                  ),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+          
+              const SizedBox(height: 12),
+          
+              // ---------------- SHUTDOWN BUTTON ----------------
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.power_settings_new, color: Colors.white),
+                  label: const Text(
+                    'Shutdown TVS',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Shutdown TVS'),
+                        content: const Text(
+                          'This will stop the server and exit the application.\n\nAre you sure?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('Cancel'),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                            ),
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('Shutdown'),
+                          ),
+                        ],
+                      ),
+                    );
+          
+                    if (confirm == true) {
+                      await shutdownTVS();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -219,5 +270,18 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ],
       ),
     );
+  }
+
+  Future<void> shutdownTVS({bool exitApp = true}) async {
+    // 1. Kill Python server
+    ServerController.instance.shutdownServer();
+
+    // 2. Optional: small delay for cleanup
+    await Future.delayed(const Duration(milliseconds: 200));
+
+    // 3. Exit Flutter app (Linux desktop)
+    if (exitApp) {
+      exit(0);
+    }
   }
 }

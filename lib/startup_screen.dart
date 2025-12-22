@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tvs/app_root.dart';
+import 'package:tvs/utils/server_controller.dart';
 
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
@@ -29,6 +30,15 @@ class _StartupScreenState extends State<StartupScreen> {
         workingDirectory: '/home/nvidia/TVS',
         runInShell: true,
       );
+
+      _serverProcess = await Process.start(
+        'python3',
+        ['server.py'],
+        workingDirectory: '/home/nvidia/TVS',
+        runInShell: true,
+      );
+
+      ServerController.instance.attach(_serverProcess!);
 
       _serverProcess!.stdout
           .transform(SystemEncoding().decoder)
