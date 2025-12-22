@@ -173,24 +173,24 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
 
           actions: [
-            Row(
-              children: [
-                const Text("LIVE", style: TextStyle(color: Colors.white)),
-                Switch(
-                  value: _isDemoMode,
-                  activeColor: Colors.greenAccent,
-                  onChanged: (value) async {
-                    setState(() => _isDemoMode = value);
-                    if (_isDemoMode) {
-                      await _initDemoVideos();
-                    } else {
-                      _disposeDemoVideos();
-                    }
-                  },
-                ),
-                const Text("DEMO", style: TextStyle(color: Colors.white)),
-              ],
-            ),
+            // Row(
+            //   children: [
+            //     const Text("LIVE", style: TextStyle(color: Colors.white)),
+            //     Switch(
+            //       value: _isDemoMode,
+            //       activeColor: Colors.greenAccent,
+            //       onChanged: (value) async {
+            //         setState(() => _isDemoMode = value);
+            //         if (_isDemoMode) {
+            //           await _initDemoVideos();
+            //         } else {
+            //           _disposeDemoVideos();
+            //         }
+            //       },
+            //     ),
+            //     const Text("DEMO", style: TextStyle(color: Colors.white)),
+            //   ],
+            // ),
             IconButton(
               icon: const Icon(Icons.settings_outlined, color: Colors.white),
               onPressed: () {
