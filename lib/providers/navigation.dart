@@ -22,15 +22,16 @@ class NavigationProvider extends ChangeNotifier {
 
         bool changed = false;
 
-        if (lat != null && lat != 0.0 && lat != _currentLatitude) {
-          _currentLatitude = lat;
-          changed = true;
-        }
+        // TODO: Uncomment when GPS is needed
+        // if (lat != null && lat != 0.0 && lat != _currentLatitude) {
+        //   _currentLatitude = lat;
+        //   changed = true;
+        // }
 
-        if (lng != null && lng != 0.0 && lng != _currentLongitude) {
-          _currentLongitude = lng;
-          changed = true;
-        }
+        // if (lng != null && lng != 0.0 && lng != _currentLongitude) {
+        //   _currentLongitude = lng;
+        //   changed = true;
+        // }
         // TODO: Uncomment when magnetometer works
         if (hdg != null && hdg != _currentHeading) {
           _currentHeading = hdg;

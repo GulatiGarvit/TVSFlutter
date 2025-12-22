@@ -144,7 +144,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               _section(
                 title: "Debug Telemetry (Raw)",
                 children: [
-                  // TODO: Replace with real telemetry values when GPS is working
+                  // TODO: Replace with real telemetry values when GPS is working-
                   _kv("GPS Status", "Locked"),
                   _kv("Heading", heading.toStringAsFixed(2)),
                   _kv("Latitude", "30.3522"),
