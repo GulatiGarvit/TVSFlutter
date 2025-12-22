@@ -3,6 +3,54 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+/// ===============================
+///        Stats Model
+/// ===============================
+
+class StatsData {
+  final double cameraFps;
+  final double dehazedFps;
+  final double avgInferenceMs;
+  final double e2eLatencyMs;
+  final double cpuPercent;
+  final double gpuPercent;
+
+  StatsData({
+    required this.cameraFps,
+    required this.dehazedFps,
+    required this.avgInferenceMs,
+    required this.e2eLatencyMs,
+    required this.cpuPercent,
+    required this.gpuPercent,
+  });
+
+  factory StatsData.fromJson(Map<dynamic, dynamic>? json) {
+    if (json == null) {
+      return StatsData(
+        cameraFps: 0,
+        dehazedFps: 0,
+        avgInferenceMs: 0,
+        e2eLatencyMs: 0,
+        cpuPercent: 0,
+        gpuPercent: 0,
+      );
+    }
+
+    return StatsData(
+      cameraFps: (json['camera_fps'] ?? 0).toDouble(),
+      dehazedFps: (json['dehazed_fps'] ?? 0).toDouble(),
+      avgInferenceMs: (json['avg_inference_ms'] ?? 0).toDouble(),
+      e2eLatencyMs: (json['e2e_latency_ms'] ?? 0).toDouble(),
+      cpuPercent: (json['cpu_percent'] ?? 0).toDouble(),
+      gpuPercent: (json['gpu_percent'] ?? 0).toDouble(),
+    );
+  }
+}
+
+/// ===============================
+///        Telemetry Model
+/// ===============================
+
 class TelemetryData {
   final double heading;
   final double lat;
@@ -10,6 +58,7 @@ class TelemetryData {
   final double speed;
   final int sats;
   final String gpsStatus;
+  final StatsData stats;
 
   TelemetryData({
     required this.heading,
@@ -18,6 +67,7 @@ class TelemetryData {
     required this.speed,
     required this.sats,
     required this.gpsStatus,
+    required this.stats,
   });
 
   factory TelemetryData.fromJson(Map<dynamic, dynamic> json) {
@@ -28,9 +78,14 @@ class TelemetryData {
       speed: (json['speed'] ?? 0).toDouble(),
       sats: (json['sats'] ?? 0).toInt(),
       gpsStatus: json['gps_status'] ?? "Unknown",
+      stats: StatsData.fromJson(json['stats']),
     );
   }
 }
+
+/// ===============================
+///        Data Service
+/// ===============================
 
 class DataService {
   final String uri;
@@ -68,11 +123,13 @@ class DataService {
             final bytes = base64Decode(decoded['data']);
             _cameraStreamController.add(bytes);
           }
+
           // DEHAZED FRAME
           else if (type == 'dehazed') {
             final bytes = base64Decode(decoded['data']);
             _dehazedStreamController.add(bytes);
           }
+
           // TELEMETRY
           else if (type == 'telemetry') {
             final telemetry = TelemetryData.fromJson(decoded);

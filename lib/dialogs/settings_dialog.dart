@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +28,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
   int sats = 0;
   String gpsStatus = "Unknown";
 
+  // ---- Performance Stats ----
+  double camFps = 0;
+  double dehazeFps = 0;
+  double avgInferenceMs = 0;
+  double e2eLatencyMs = 0;
+  double cpuPercent = 0;
+  double gpuPercent = 0;
+
+  bool showAdvanced = false;
+
   StreamSubscription? _telemetrySub;
 
   @override
@@ -36,18 +45,25 @@ class _SettingsDialogState extends State<SettingsDialog> {
     super.initState();
 
     final dataService = context.read<NavigationProvider>().dataService;
-
-    // subscribe to raw telemetry stream
     if (dataService == null) return;
 
     _telemetrySub = dataService.telemetryStream.listen((t) {
       setState(() {
+        // Raw telemetry
         heading = t.heading;
         lat = t.lat;
         lng = t.lng;
         speed = t.speed;
         sats = t.sats;
         gpsStatus = t.gpsStatus;
+
+        // Stats
+        camFps = t.stats.cameraFps;
+        dehazeFps = t.stats.dehazedFps;
+        avgInferenceMs = t.stats.avgInferenceMs;
+        e2eLatencyMs = t.stats.e2eLatencyMs;
+        cpuPercent = t.stats.cpuPercent;
+        gpuPercent = t.stats.gpuPercent;
       });
     });
   }
@@ -74,173 +90,142 @@ class _SettingsDialogState extends State<SettingsDialog> {
         height: MediaQuery.of(context).size.height * 0.7,
         child: SingleChildScrollView(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // ---------------- AIRPORT SELECTOR ----------------
               Row(
                 children: [
-                  Text(
-                    "Select Airport: ",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  const Text("Select Airport:",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: DropdownSearch<String>(
-                      items:
-                          (f, cs) =>
-                              airportData.entries
-                                  .map((e) => "${e.key} - ${e.value['name']}")
-                                  .toList(),
+                      items: (f, cs) => airportData.entries
+                          .map((e) => "${e.key} - ${e.value['name']}")
+                          .toList(),
                       selectedItem: _selectedAirport,
-                      popupProps: const PopupProps.menu(
-                        showSearchBox: true,
-                        searchFieldProps: TextFieldProps(
-                          decoration: InputDecoration(
-                            labelText: 'Search airport',
-                            prefixIcon: Icon(Icons.search),
-                          ),
-                        ),
-                      ),
-                      decoratorProps: const DropDownDecoratorProps(
-                        decoration: InputDecoration(border: OutlineInputBorder()),
-                      ),
+                      popupProps: const PopupProps.menu(showSearchBox: true),
                       onChanged: (value) {
-                        setState(() {
-                          _selectedAirport = value;
-                          if (_selectedAirport == null) return;
-          
-                          context.read<SettingsProvider>().setAirportCode(
-                            _selectedAirport!.split(" - ")[0],
-                          );
-          
-                          // Clear any existing navigation
-                          context.read<NavigationProvider>().stopNavigation();
-                        });
+                        if (value == null) return;
+                        context
+                            .read<SettingsProvider>()
+                            .setAirportCode(value.split(" - ")[0]);
+                        context.read<NavigationProvider>().stopNavigation();
                       },
                     ),
                   ),
                 ],
               ),
-          
+
               const SizedBox(height: 16),
-          
+
               // ---------------- UNITS SELECTOR ----------------
               Row(
                 children: [
-                  Text(
-                    "Measurement Units: ",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  const Text("Measurement Units:",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: BoxRadioGroup(
-                      options: ["Nautical", "Metric", "Imperial"],
+                      options: const ["Nautical", "Metric", "Imperial"],
                       selected: _selectedUnit,
                       onChanged: (value) {
-                        setState(() {
-                          _selectedUnit = value;
-                          context.read<SettingsProvider>().setUnitSystem(value);
-                        });
+                        context
+                            .read<SettingsProvider>()
+                            .setUnitSystem(value);
                       },
                     ),
                   ),
                 ],
               ),
-          
+
               const SizedBox(height: 24),
-          
-              // ---------------- RAW DEBUG TELEMETRY ----------------
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: Colors.grey.shade400),
+
+              // ---------------- RAW TELEMETRY ----------------
+              _section(
+                title: "Debug Telemetry (Raw)",
+                children: [
+                  _kv("GPS Status", gpsStatus),
+                  _kv("Heading", heading.toStringAsFixed(2)),
+                  _kv("Latitude", lat.toStringAsFixed(6)),
+                  _kv("Longitude", lng.toStringAsFixed(6)),
+                  _kv("Speed (km/h)", speed.toStringAsFixed(2)),
+                  _kv("Satellites", sats.toString()),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // ---------------- ADVANCED TOGGLE ----------------
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  "Advanced",
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                subtitle:
+                    const Text("Show performance & system statistics"),
+                value: showAdvanced,
+                onChanged: (v) => setState(() => showAdvanced = v),
+              ),
+
+              if (showAdvanced) ...[
+                const SizedBox(height: 8),
+
+                // ---------------- PERFORMANCE STATS ----------------
+                _section(
+                  title: "Performance Stats",
                   children: [
-                    Text(
-                      "Debug Telemetry (Raw)",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-          
-                    _kv("GPS Status", gpsStatus),
-                    _kv("Heading", heading.toStringAsFixed(2)),
-                    _kv("Latitude", lat.toStringAsFixed(6)),
-                    _kv("Longitude", lng.toStringAsFixed(6)),
-                    _kv("Speed (km/h)", speed.toStringAsFixed(2)),
-                    _kv("Satellites", sats.toString()),
+                    _kv("Camera FPS", camFps.toStringAsFixed(2)),
+                    _kv("Dehaze FPS", dehazeFps.toStringAsFixed(2)),
+                    _kv("Inference (ms)", avgInferenceMs.toStringAsFixed(1)),
+                    _kv("Latency (ms)", e2eLatencyMs.toStringAsFixed(1)),
+                    _kv("CPU Usage (%)", cpuPercent.toStringAsFixed(1)),
+                    _kv("GPU Usage (%)", gpuPercent.toStringAsFixed(1)),
                   ],
                 ),
-              ),
-          
+              ],
+
               const SizedBox(height: 24),
-          
-              // ---------------- CLOSE BUTTON ----------------
+
+              // ---------------- CLOSE ----------------
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    backgroundColor: Colors.blueGrey,
-                  ),
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: const Text("Close"),
                 ),
               ),
-          
+
               const SizedBox(height: 12),
-          
-              // ---------------- SHUTDOWN BUTTON ----------------
+
+              // ---------------- SHUTDOWN ----------------
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.power_settings_new, color: Colors.white),
-                  label: const Text(
-                    'Shutdown TVS',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  icon: const Icon(Icons.power_settings_new),
+                  label: const Text("Shutdown TVS"),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    backgroundColor: Colors.redAccent,
-                  ),
+                      backgroundColor: Colors.redAccent),
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Shutdown TVS'),
                         content: const Text(
-                          'This will stop the server and exit the application.\n\nAre you sure?',
-                        ),
+                            'This will stop the server and exit the application.\n\nAre you sure?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
                             child: const Text('Cancel'),
                           ),
                           ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
-                            ),
                             onPressed: () => Navigator.pop(ctx, true),
                             child: const Text('Shutdown'),
                           ),
                         ],
                       ),
                     );
-          
+
                     if (confirm == true) {
                       await shutdownTVS();
                     }
@@ -254,18 +239,43 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  /// Helper KV Row
+  // ---------------- UI HELPERS ----------------
+
+  Widget _section({required String title, required List<Widget> children}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade400),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
+
   Widget _kv(String key, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
           SizedBox(
-            width: 120,
-            child: Text(key, style: TextStyle(fontWeight: FontWeight.w600)),
+            width: 160,
+            child:
+                Text(key, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
           Expanded(
-            child: Text(value, style: TextStyle(fontFamily: "monospace")),
+            child:
+                Text(value, style: const TextStyle(fontFamily: "monospace")),
           ),
         ],
       ),
@@ -273,15 +283,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
   }
 }
 
+// ============================================================
+//                     Shutdown Logic
+// ============================================================
+
 Future<void> shutdownTVS({bool exitApp = true}) async {
-    // 1. Kill Python server
-    ServerController.instance.shutdownServer();
-
-    // 2. Optional: small delay for cleanup
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    // 3. Exit Flutter app (Linux desktop)
-    if (exitApp) {
-      exit(0);
-    }
-  }
+  ServerController.instance.shutdownServer();
+  await Future.delayed(const Duration(milliseconds: 200));
+  if (exitApp) exit(0);
+}
