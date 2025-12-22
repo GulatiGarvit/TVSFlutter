@@ -29,14 +29,7 @@ class _StartupScreenState extends State<StartupScreen> {
         'python3',
         ['server.py'],
         workingDirectory: '/home/nvidia/TVS',
-        runInShell: true,
-      );
-
-      _serverProcess = await Process.start(
-        'python3',
-        ['server.py'],
-        workingDirectory: '/home/nvidia/TVS',
-        runInShell: true,
+        runInShell: false,
       );
 
       ServerController.instance.attach(_serverProcess!);
