@@ -18,9 +18,9 @@ class NavigationProvider extends ChangeNotifier {
       try {
         // TODO: Uncomment when GPS is needed
         // double? lat = data.lat;
-        double? lat = 30.3522;
+        double? lat = _currentLatitude;
         // double? lng = data.lng;
-        double? lng = 76.3737;
+        double? lng = _currentLongitude;
         double? hdg = data.heading;
 
         bool changed = false;
