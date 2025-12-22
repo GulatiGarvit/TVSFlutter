@@ -4,6 +4,7 @@ import 'package:tvs/dashboard.dart';
 import 'package:tvs/data_service.dart';
 import 'package:tvs/providers/navigation.dart';
 import 'package:tvs/providers/settings.dart';
+import 'package:tvs/startup_screen.dart';
 import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
 import 'package:flutter_fullscreen/flutter_fullscreen.dart';
@@ -23,27 +24,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
-      title: 'TVS Dashboard',
       debugShowCheckedModeBanner: false,
-      home: MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final dataService = DataService("ws://127.0.0.1:8765");
-    dataService.connect();
-
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => NavigationProvider(dataService)),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
-      ],
-      child: const DashboardPage(),
+      home: StartupScreen(),
     );
   }
 }
