@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:tvs/app_root.dart';
+import 'package:tvs/dialogs/settings_dialog.dart';
 import 'package:tvs/utils/server_controller.dart';
 
 class StartupScreen extends StatefulWidget {
@@ -54,12 +55,20 @@ class _StartupScreenState extends State<StartupScreen> {
             _fatal = true;
             _logs.add('[FATAL] Server exited with code $code');
           });
+
+          Future.delayed(const Duration(seconds: 2), () {
+            shutdownTVS();
+          });
         }
       });
     } catch (e) {
       setState(() {
         _fatal = true;
         _logs.add('[FATAL] Failed to start server: $e');
+      });
+
+      Future.delayed(const Duration(seconds: 2), () {
+        shutdownTVS();
       });
     }
   }

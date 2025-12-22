@@ -271,8 +271,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
       ),
     );
   }
+}
 
-  Future<void> shutdownTVS({bool exitApp = true}) async {
+Future<void> shutdownTVS({bool exitApp = true}) async {
     // 1. Kill Python server
     ServerController.instance.shutdownServer();
 
@@ -284,4 +285,3 @@ class _SettingsDialogState extends State<SettingsDialog> {
       exit(0);
     }
   }
-}
