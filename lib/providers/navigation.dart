@@ -16,8 +16,11 @@ class NavigationProvider extends ChangeNotifier {
 
     _telemetrySub = _dataService.telemetryStream.listen((data) {
       try {
-        double? lat = data.lat;
-        double? lng = data.lng;
+        // TODO: Uncomment when GPS is needed
+        // double? lat = data.lat;
+        double? lat = 30.3522;
+        // double? lng = data.lng;
+        double? lng = 76.3737;
         double? hdg = data.heading;
 
         bool changed = false;
