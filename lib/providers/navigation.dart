@@ -43,7 +43,7 @@ class NavigationProvider extends ChangeNotifier {
 
         if (changed) {
           if (_isNavigating && _steps.isNotEmpty) {
-            _recalculateNavigation();
+            // _recalculateNavigation();
           }
           notifyListeners();
         }
