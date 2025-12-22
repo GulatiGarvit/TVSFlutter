@@ -15,7 +15,7 @@ class ServerController {
   void shutdownServer() {
     if (_serverProcess != null) {
       try {
-        _serverProcess!.kill(ProcessSignal.sigterm);
+        _serverProcess!.kill(ProcessSignal.sigkill);
       } catch (_) {}
       _serverProcess = null;
     }
