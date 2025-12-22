@@ -64,8 +64,12 @@ class _DashboardPageState extends State<DashboardPage> {
     _demoDehazedPlayer = Player();
     _demoCameraPlayer = Player();
 
-    _demoDehazedController = VideoController(_demoDehazedPlayer!);
-    _demoCameraController = VideoController(_demoCameraPlayer!);
+    _demoDehazedController = VideoController(_demoDehazedPlayer!, configuration: VideoControllerConfiguration(
+      enableHardwareAcceleration: false,
+    ));
+    _demoCameraController = VideoController(_demoCameraPlayer!, configuration: VideoControllerConfiguration(
+      enableHardwareAcceleration: false,
+    ));
 
     await _demoDehazedPlayer!.open(
       Media('asset:///assets/defogged_trimmed_fixed.mp4'),
