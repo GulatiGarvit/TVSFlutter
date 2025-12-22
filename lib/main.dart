@@ -8,10 +8,12 @@ import 'package:tvs/video_feed.dart';
 import 'package:tvs/feed_section.dart';
 import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'package:tvs/navigation_section.dart';
+import 'package:media_kit/media_kit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FullScreen.ensureInitialized();
+  MediaKit.ensureInitialized();
   runApp(const MyApp());
 }
 

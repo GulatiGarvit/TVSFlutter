@@ -13,6 +13,7 @@ class NavigationStep {
   final String pathValue;
   final int distance;
   final int time;
+  final String unit;
 
   NavigationStep({
     required this.direction,
@@ -21,6 +22,7 @@ class NavigationStep {
     required this.pathValue,
     required this.distance,
     required this.time,
+    required this.unit,
   });
 
   NavigationStep copyWith({
@@ -30,6 +32,7 @@ class NavigationStep {
     String? pathValue,
     int? distance,
     int? time,
+    String? unit,
   }) {
     return NavigationStep(
       direction: direction ?? this.direction,
@@ -38,6 +41,7 @@ class NavigationStep {
       pathValue: pathValue ?? this.pathValue,
       distance: distance ?? this.distance,
       time: time ?? this.time,
+      unit: unit ?? this.unit,
     );
   }
 }

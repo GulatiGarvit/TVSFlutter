@@ -24,9 +24,6 @@ class MapNavigationView extends StatefulWidget {
 
 class _MapNavigationViewState extends State<MapNavigationView> {
   final TransformationController controller = TransformationController();
-  bool _isFollowingRotation = true;
-  double _manualRotation = 0.0;
-  double _baseRotation = 0.0;
 
   ui.Image? airplaneIcon;
 
@@ -61,7 +58,7 @@ class _MapNavigationViewState extends State<MapNavigationView> {
   }
 
   void _onNavigationUpdate() {
-    if (_isFollowingRotation && mounted) {
+    if (mounted) {
       setState(() {});
     }
   }
@@ -98,90 +95,35 @@ class _MapNavigationViewState extends State<MapNavigationView> {
           ..scale(currentScale);
   }
 
-  double get _currentRotation {
-    if (_isFollowingRotation) {
-      return -widget.nav.currentHeading * math.pi / 180;
-    } else {
-      return _manualRotation;
-    }
-  }
-
-  void _onRotationStart() {
-    if (_isFollowingRotation) {
-      setState(() {
-        _isFollowingRotation = false;
-        _manualRotation = -widget.nav.currentHeading * math.pi / 180;
-      });
-    }
-
-    _baseRotation = _manualRotation;
-  }
-
-  void _onRotationUpdate(double rotation) {
-    setState(() {
-      _manualRotation = _baseRotation + rotation;
-    });
-  }
-
-  void _resetRotation() {
-    setState(() {
-      _isFollowingRotation = true;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        GestureDetector(
-          onScaleStart: (details) {
-            if (details.pointerCount == 2) _onRotationStart();
-          },
-          onScaleUpdate: (details) {
-            if (details.pointerCount == 2) _onRotationUpdate(details.rotation);
-          },
-          child: InteractiveViewer(
-            transformationController: controller,
-            panEnabled: true,
-            scaleEnabled: true,
-            minScale: 0.5,
-            maxScale: 5.0,
-            boundaryMargin: EdgeInsets.all(double.infinity),
-            constrained: false,
-            child: Transform.rotate(
-              angle: _currentRotation,
-              child: CustomPaint(
-                size: Size(
-                  widget.mapImage.width.toDouble(),
-                  widget.mapImage.height.toDouble(),
-                ),
-                painter: MapPainter(
-                  mapImage: widget.mapImage,
-                  rawPath: widget.nav.rawPath,
-                  transform: Matrix4.identity(),
-                  userLat: widget.nav.currentLatitude,
-                  userLng: widget.nav.currentLongitude,
-                  userHeading: widget.nav.currentHeading,
-                  coordTransformer: widget.transform,
-                  airplaneIcon: airplaneIcon, // <- PASS IT HERE
-                ),
-              ),
+        InteractiveViewer(
+          transformationController: controller,
+          panEnabled: true,
+          scaleEnabled: true,
+          minScale: 0.5,
+          maxScale: 5.0,
+          boundaryMargin: EdgeInsets.all(double.infinity),
+          constrained: false,
+          child: CustomPaint(
+            size: Size(
+              widget.mapImage.width.toDouble(),
+              widget.mapImage.height.toDouble(),
+            ),
+            painter: MapPainter(
+              mapImage: widget.mapImage,
+              rawPath: widget.nav.rawPath,
+              transform: Matrix4.identity(),
+              userLat: widget.nav.currentLatitude,
+              userLng: widget.nav.currentLongitude,
+              userHeading: widget.nav.currentHeading,
+              coordTransformer: widget.transform,
+              airplaneIcon: airplaneIcon,
             ),
           ),
         ),
-
-        if (!_isFollowingRotation)
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              mini: true,
-              onPressed: _resetRotation,
-              child: Icon(Icons.explore),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
       ],
     );
   }

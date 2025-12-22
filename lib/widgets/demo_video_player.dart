@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 class DemoVideoPlayer extends StatelessWidget {
-  final VideoPlayerController controller;
+  final VideoController controller;
   final String title;
 
   const DemoVideoPlayer({
@@ -13,10 +13,6 @@ class DemoVideoPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!controller.value.isInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -26,9 +22,9 @@ class DemoVideoPlayer extends StatelessWidget {
           child: Text(title, style: const TextStyle(color: Colors.white)),
         ),
         Expanded(
-          child: AspectRatio(
-            aspectRatio: controller.value.aspectRatio,
-            child: VideoPlayer(controller),
+          child: Video(
+            controller: controller,
+            fit: BoxFit.cover,
           ),
         ),
       ],

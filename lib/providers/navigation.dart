@@ -59,7 +59,7 @@ class NavigationProvider extends ChangeNotifier {
   List<RawPathSegment> _rawPath = [];
   int _currentStepIndex = 0;
   bool _isNavigating = false;
-  String _unitSystem = 'Metric';
+  String _unitSystem = 'Nautical';
   Map<String, dynamic>? _airportData;
   DataService _dataService;
   StreamSubscription? _telemetrySub;
@@ -67,7 +67,7 @@ class NavigationProvider extends ChangeNotifier {
   // GPS and Gyro data
   double _currentLatitude = 40.6413;
   double _currentLongitude = -73.7781;
-  double _currentHeading = 0.0;
+  double _currentHeading = 90.0;
   int _distanceToNextStep = 0;
 
   double get currentLatitude => _currentLatitude;
@@ -76,6 +76,8 @@ class NavigationProvider extends ChangeNotifier {
   double get currentHeading => _currentHeading;
   List<RawPathSegment> get rawPath => _rawPath;
   DataService get dataService => _dataService;
+
+  String get unitSystem => _unitSystem;
 
   List<NavigationStep> get steps => _steps;
   int get currentStepIndex => _currentStepIndex;
@@ -202,6 +204,7 @@ class NavigationProvider extends ChangeNotifier {
             pathValue: current.name,
             distance: 0,
             time: 30, // 30 seconds hold time
+            unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft',
           ),
         );
         continue;
@@ -235,6 +238,7 @@ class NavigationProvider extends ChangeNotifier {
               pathValue: current.name,
               distance: distance,
               time: NavigationUtils.calculateTime(distanceMeters),
+              unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft',
             ),
           );
           continue;
@@ -290,6 +294,7 @@ class NavigationProvider extends ChangeNotifier {
               pathValue: current.name,
               distance: distanceBeforeTurn,
               time: NavigationUtils.calculateTime(distanceBeforeTurnMeters),
+              unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft'
             ),
           );
 
@@ -316,6 +321,7 @@ class NavigationProvider extends ChangeNotifier {
               pathValue: next.name,
               distance: turnDistance,
               time: NavigationUtils.calculateTime(turnDistanceMeters),
+              unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft',
             ),
           );
         } else {
@@ -328,6 +334,7 @@ class NavigationProvider extends ChangeNotifier {
               pathValue: current.name,
               distance: distance,
               time: NavigationUtils.calculateTime(distanceMeters),
+              unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft',
             ),
           );
         }
@@ -341,6 +348,7 @@ class NavigationProvider extends ChangeNotifier {
             pathValue: current.name,
             distance: distance,
             time: NavigationUtils.calculateTime(distanceMeters),
+            unit: _unitSystem == 'Metric' ? 'm' : _unitSystem == 'Nautical' ? 'nm' : 'ft',
           ),
         );
       }

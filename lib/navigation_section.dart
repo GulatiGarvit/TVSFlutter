@@ -223,7 +223,7 @@ class _NavigationSectionState extends State<NavigationSection> {
                     Icon(Icons.straighten, color: Colors.white70, size: 16),
                     SizedBox(width: 4),
                     Text(
-                      '${step.distance}m',
+                      '${step.distance}${step.unit}',
                       style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     SizedBox(width: 16),
@@ -330,7 +330,7 @@ class _NavigationSectionState extends State<NavigationSection> {
             ),
           ),
           Text(
-            '${step.distance}m',
+            '${step.distance}${step.unit}',
             style: TextStyle(color: Colors.white60, fontSize: 12),
           ),
         ],
@@ -411,7 +411,7 @@ class _NavigationSectionState extends State<NavigationSection> {
           _buildFooterItem(
             icon: Icons.straighten,
             label: 'Distance',
-            value: '${navProvider.totalDistance}m',
+            value: '${navProvider.totalDistance}${navProvider.unitSystem == 'Metric' ? 'm' : navProvider.unitSystem == 'Nautical' ? 'nm' : 'ft'}',
           ),
           Container(width: 1, height: 30, color: Colors.white24),
           _buildFooterItem(

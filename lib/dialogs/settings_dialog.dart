@@ -108,6 +108,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         context.read<SettingsProvider>().setAirportCode(
                           _selectedAirport!.split(" - ")[0],
                         );
+
+                        // Clear any existing navigation
+                        context.read<NavigationProvider>().stopNavigation();
                       });
                     },
                   ),

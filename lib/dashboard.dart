@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'package:provider/provider.dart';
+
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+
 import 'package:tvs/widgets/demo_video_player.dart';
-import 'package:video_player/video_player.dart';
 
 import 'package:tvs/data.dart';
 import 'package:tvs/map/map_navigation_view.dart';
@@ -34,8 +37,11 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isFullscreen = false;
   bool _isDemoMode = false;
 
-  VideoPlayerController? _demoDehazedController;
-  VideoPlayerController? _demoCameraController;
+  Player? _demoDehazedPlayer;
+  Player? _demoCameraPlayer;
+
+  VideoController? _demoDehazedController;
+  VideoController? _demoCameraController;
 
   @override
   void dispose() {
@@ -55,41 +61,50 @@ class _DashboardPageState extends State<DashboardPage> {
   // DEMO VIDEOS (SYNCED LOOP)
   // -----------------------------------------------------
   Future<void> _initDemoVideos() async {
-    _demoDehazedController = VideoPlayerController.asset(
-      'assets/defogged_trimmed_fixed.mp4',
+    _demoDehazedPlayer = Player();
+    _demoCameraPlayer = Player();
+
+    _demoDehazedController = VideoController(_demoDehazedPlayer!);
+    _demoCameraController = VideoController(_demoCameraPlayer!);
+
+    await _demoDehazedPlayer!.open(
+      Media('asset:///assets/defogged_trimmed_fixed.mp4'),
     );
-    _demoCameraController = VideoPlayerController.asset(
-      'assets/trimmed_fixed.mp4',
+    await _demoCameraPlayer!.open(
+      Media('asset:///assets/trimmed_fixed.mp4'),
     );
 
-    await Future.wait([
-      _demoDehazedController!.initialize(),
-      _demoCameraController!.initialize(),
-    ]);
+    void syncLoop() async {
+      final dPos = _demoDehazedPlayer!.state.position;
+      final dDur = _demoDehazedPlayer!.state.duration;
 
-    void syncLoop() {
-      final d = _demoDehazedController!;
-      final c = _demoCameraController!;
+      final cPos = _demoCameraPlayer!.state.position;
+      final cDur = _demoCameraPlayer!.state.duration;
 
-      if (d.value.position >= d.value.duration &&
-          c.value.position >= c.value.duration) {
-        d.seekTo(Duration.zero);
-        c.seekTo(Duration.zero);
-        d.play();
-        c.play();
+      if (dDur != Duration.zero &&
+          cDur != Duration.zero &&
+          dPos >= dDur &&
+          cPos >= cDur) {
+        await _demoDehazedPlayer!.seek(Duration.zero);
+        await _demoCameraPlayer!.seek(Duration.zero);
+        await _demoDehazedPlayer!.play();
+        await _demoCameraPlayer!.play();
       }
     }
 
-    _demoDehazedController!.addListener(syncLoop);
-    _demoCameraController!.addListener(syncLoop);
+    _demoDehazedPlayer!.stream.completed.listen((_) => syncLoop());
+    _demoCameraPlayer!.stream.completed.listen((_) => syncLoop());
 
-    _demoDehazedController!.play();
-    _demoCameraController!.play();
+    await _demoDehazedPlayer!.play();
+    await _demoCameraPlayer!.play();
   }
 
   void _disposeDemoVideos() {
-    _demoDehazedController?.dispose();
-    _demoCameraController?.dispose();
+    _demoDehazedPlayer?.dispose();
+    _demoCameraPlayer?.dispose();
+
+    _demoDehazedPlayer = null;
+    _demoCameraPlayer = null;
     _demoDehazedController = null;
     _demoCameraController = null;
   }
@@ -143,13 +158,13 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: EdgeInsets.only(left: 12, top: 8, bottom: 8),
             child: ClockWidget(textStyle: TextStyle(color: Colors.white)),
           ),
-          leadingWidth: 200,
+          leadingWidth: 300,
 
           title: GestureDetector(
             onTap: _toggleFullscreen,
             child: const Text(
               'TVS Dashboard',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.white, fontSize: 18),
             ),
           ),
 
@@ -178,16 +193,15 @@ class _DashboardPageState extends State<DashboardPage> {
                 showDialog(
                   context: context,
                   barrierDismissible: true,
-                  builder:
-                      (_) => MultiProvider(
-                        providers: [
-                          ChangeNotifierProvider.value(value: settingsProvider),
-                          ChangeNotifierProvider.value(
-                            value: navigationProvider,
-                          ),
-                        ],
-                        child: const SettingsDialog(),
+                  builder: (_) => MultiProvider(
+                    providers: [
+                      ChangeNotifierProvider.value(value: settingsProvider),
+                      ChangeNotifierProvider.value(
+                        value: navigationProvider,
                       ),
+                    ],
+                    child: const SettingsDialog(),
+                  ),
                 );
               },
             ),
